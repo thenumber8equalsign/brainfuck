@@ -3,4 +3,4 @@ and there is an interpreter located at interpreter/
 
 that's all!
 
-TODO: i forgot to test reading
+TODO: reading also reads the newline character
