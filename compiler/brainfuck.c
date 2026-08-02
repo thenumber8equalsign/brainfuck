@@ -147,6 +147,7 @@ void compile_brainfuck(char *assembly_str, int fd)
 			at += snprintf(at, ASSEMBLY_MAX_SIZE, format,
 				       braces[i_brace].loop_index,
 				       braces[i_brace].loop_index);
+			++i_brace;
 		}
 	}
 	at += snprintf(at, ASSEMBLY_MAX_SIZE, "%s", assembly_end);
