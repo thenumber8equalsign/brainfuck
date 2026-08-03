@@ -41,4 +41,6 @@ int main(int argc, char **argv)
 
 	close(fd);
 	free(assembly_output);
+	assembly_output = NULL;
+	return 0;
 }

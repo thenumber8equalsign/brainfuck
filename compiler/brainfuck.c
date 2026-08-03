@@ -152,4 +152,5 @@ void compile_brainfuck(char *assembly_str, int fd)
 	}
 	at += snprintf(at, ASSEMBLY_MAX_SIZE, "%s", assembly_end);
 	free(braces);
+	braces = NULL;
 }
