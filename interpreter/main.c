@@ -149,8 +149,12 @@ void do_brainfuck(unsigned char *buffer, int brainfuck_fd)
 			}
 		} else if (instruction == ',') {
 			unsigned char ch = 0;
-			if (read(STDIN_FILENO, &ch, 1) == -1) {
-				err(EXIT_FAILURE, "read");
+			for (;;) {
+				if (read(STDIN_FILENO, &ch, 1) == -1) {
+					err(EXIT_FAILURE, "read");
+				}
+				if (ch != '\n')
+					break;
 			}
 
 			buffer[pointer] = ch;
