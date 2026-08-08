@@ -21,7 +21,7 @@ static const char *assembly_begin =
 	".global _start\n"
 
 	".section .rodata\n"
-	"error_message: .asciz \"an error occurred\"\n"
+	"error_message: .asciz \"an error occurred\\n\"\n"
 	"error_message_len = (. - error_message)\n"
 
 	".section .text\n"
@@ -43,7 +43,7 @@ static const char *assembly_begin =
 	"error:\n"
 	"	mov	rax, 1\n"
 	"	mov	rdi, 1\n"
-	"	lea	rsi, error_message\n"
+	"	lea	rsi, [rip + error_message]\n"
 	"	mov	rdx, error_message_len\n"
 	"	syscall\n"
 	"	mov	rax, 60\n"
@@ -52,7 +52,7 @@ static const char *assembly_begin =
 	"do_code:\n"
 	"	push	rbp\n"
 	"	mov	rbp, rsp\n"
-	"	sub	rsp, 69\n" // funnee
+	"	sub	rsp, 64\n"
 	"	mov	qword ptr [rbp-8], rax\n"
 	"	mov	rbx, rax\n"
 	"	xor	r12d, r12d\n"
@@ -110,11 +110,29 @@ static const char *assembly_end =
 	"	ret\n"
 	// void do_read(u64 ptr, u64 buf_addr)
 	"do_read:\n"
-	"	add	rsi, rdi\n"
+	"	push	rbp\n"
+	"	mov	rbp, rsp\n"
+	"	sub	rsp, 64\n"
+	"	mov	qword ptr [rbp-8], rsi\n"
+	"	add	qword ptr [rbp-8], rdi\n"
+	"	mov	qword ptr [rbp-16], 0\n" // this will be char ch;
+	// rbp-8: address of the array
+	// byte @ rbp-16: the temporary character
+	"do_read_loop:\n"
 	"	mov	rax, 0\n"
 	"	mov	rdi, 0\n"
+	"	lea	rsi, qword ptr [rbp-16]\n"
 	"	mov	rdx, 1\n"
 	"	syscall\n"
+
+	"	cmp	byte ptr [rbp-16], 0xa\n"
+	"	je	do_read_loop\n"
+
+	"do_read_loop_done:\n"
+	"	mov	rax, qword ptr [rbp-8]\n"
+	"	mov	dl, byte ptr [rbp-16]\n"
+	"	mov	byte ptr [rax], dl\n"
+	"	leave\n"
 	"	ret\n"
 	;
 // clang-format on
