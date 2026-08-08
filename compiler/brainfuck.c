@@ -24,7 +24,7 @@
  *
  * Return: the pointer to the corrosponding open brace, or NULL
  */
-struct loop_brace *find_open_brace(struct loop_brace *braces, size_t index)
+static struct loop_brace *find_open_brace(struct loop_brace *braces, size_t index)
 {
 	--index;
 	size_t num_loops = 0;
