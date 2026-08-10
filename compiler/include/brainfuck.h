@@ -2,6 +2,10 @@
 #ifndef __BRAINFUCK_H__
 #define __BRAINFUCK_H__
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define _STR(x) #x
 #define STR(x) _STR(x)
 
@@ -170,5 +174,9 @@ struct loop_brace {
  * Return: none
  */
 void compile_brainfuck(char *assembly_str, int fd);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -1,5 +1,3 @@
-*/build/*
-*/build
+build/
 .clangd
-*/a.out
 a.out
