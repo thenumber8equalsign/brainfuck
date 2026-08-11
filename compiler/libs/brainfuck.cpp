@@ -22,7 +22,7 @@ extern "C" {
  * @instr: the character for the instruction
  * @repetitions: the number of times the instruction is performed in a row
  * 	only useful if it is +, -, <, or >
- * 	a value of 0 will effectively remove the instruction
+ * 	a value of 0 will effectively remove the instruction, for all instructions
  * @loop_index: the index of the loop (only useful if instruction is '[' or ']')
  * @corrosponding_open: if instruction is ']', then the pointer to the corrosponding
  * 	open loop instruction
@@ -38,6 +38,7 @@ struct brainfuck_instruction {
  * instruction_to_assembly() - convert a brainfuck_instruction to assembly
  * @instruction: the struct brainfuck_instruction to convert
  * @str: the string to output to, should be around 100 in size
+ * @options: compiler options, see definition for documentation
  *
  * if instruction->repetitions is 0, nothing happens
  *
@@ -46,10 +47,12 @@ struct brainfuck_instruction {
  * Return: none
  */
 void instruction_to_assembly(const struct brainfuck_instruction *instruction,
-			     char *str)
+			     char *str, const struct compiler_options *options)
 {
 	if (instruction->repetitions == 0)
 		return;
+
+	const bool undefined_overflow = options->overflow == POINTER_UNDEFINED;
 
 	// rbx is containing the address of the array
 	// r12 is containing the pointer
@@ -67,21 +70,31 @@ void instruction_to_assembly(const struct brainfuck_instruction *instruction,
 		return;
 	}
 
-	if (instruction->instruction == '<') {
+	if (instruction->instruction == '<' && !undefined_overflow) {
 		const char *format = "\tmov	rdi, r12\n"
 				     "\tmov	rsi, %lu\n"
 				     "\tcall	decrement_pointer\n"
 				     "\tmov	r12, rax\n";
-		sprintf(str, format, instruction->repetitions % 256);
+		sprintf(str, format, instruction->repetitions);
+		return;
+	} else if (instruction->instruction == '<' && undefined_overflow) {
+		const char *format = "\tmov	rdi, %lu\n"
+				     "\tsub	r12, rdi\n";
+		sprintf(str, format, instruction->repetitions);
 		return;
 	}
 
-	if (instruction->instruction == '>') {
+	if (instruction->instruction == '>' && !undefined_overflow) {
 		const char *format = "\tmov	rdi, r12\n"
 				     "\tmov	rsi, %lu\n"
 				     "\tcall	increment_pointer\n"
 				     "\tmov	r12, rax\n";
-		sprintf(str, format, instruction->repetitions % 256);
+		sprintf(str, format, instruction->repetitions);
+		return;
+	} else if (instruction->instruction == '>' && undefined_overflow) {
+		const char *format = "\tmov	rdi, %lu\n"
+				     "\tadd	r12, rdi\n";
+		sprintf(str, format, instruction->repetitions);
 		return;
 	}
 
@@ -204,7 +217,7 @@ static bool is_opposite_instruction(char a, char b)
  * @assembly_str: the string for the assembly to go to, everything in it will be
  *	overwritten
  * @fd: the file descriptor to the brainfuck code
- * @options: brainfuck options, see declaration for documentation
+ * @options: brainfuck options, see definition for documentation
  *
  * Context: might take a long time, but it shouldn't sleep, it also might
  * 	exit the program because of err()
@@ -311,11 +324,18 @@ void compile_brainfuck(std::string *assembly_str, const int fd,
 			continue;
 
 		char buf[256];
-		instruction_to_assembly(&instructions[i], buf);
+		instruction_to_assembly(&instructions[i], buf, options);
 
 		assembly_str->append(buf);
 	}
 
 	assembly_str->append(assembly_end);
+	if (options->overflow == POINTER_WRAP) {
+		assembly_str->append(pointer_functions_wrap);
+	} else if (options->overflow == POINTER_ABORT) {
+		assembly_str->append(pointer_functions_abort);
+	}
+
+	assembly_str->append(read_write_functions);
 }
 }

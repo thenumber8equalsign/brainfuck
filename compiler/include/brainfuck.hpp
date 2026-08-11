@@ -67,6 +67,7 @@ static const char *assembly_begin =
 	".section .rodata\n"
 	"error_message: .asciz \"an error occurred\\n\"\n"
 	"error_message_len = (. - error_message)\n"
+	"array_size: .8byte " STR(ARRAY_SIZE) "\n"
 
 	".section .text\n"
 	"_start:\n"
@@ -76,7 +77,7 @@ static const char *assembly_begin =
 	// are initialized to zero, so no initialization is needed
 	"	mov	rax, 9\n"
 	"	xor	edi, edi\n"
-	"	mov	rsi, " STR(ARRAY_SIZE) "\n"
+	"	mov	rsi, qword ptr [array_size]\n"
 	"	mov	rdx, 0x3\n"
 	"	mov	r10, 0x22\n"
 	"	mov	r8, -1\n"
@@ -100,30 +101,31 @@ static const char *assembly_begin =
 	"	mov	qword ptr [rbp-8], rax\n"
 	"	mov	rbx, rax\n"
 	"	xor	r12d, r12d\n"
-	"// GENERATED_CODE:\n";
+	;
 	// generated code goes here
 	// rbx is containing the address of the array
 	// r12 is containing the movable pointer
 
 // this is to follow the generated code
 static const char *assembly_end =
-	"// ASSEMBLY_END:\n"
 	"	mov	rax, 11\n"
 	"	mov	rdi, qword [rbp-8]\n"
-	"	mov	rsi, " STR(ARRAY_SIZE) "\n"
+	"	mov	rsi, qword ptr [array_size]\n"
 	"	syscall\n"
 	"	mov	rsp, rbp\n"
 	"	pop	rbp\n"
 	"	mov	rax, 60\n"
 	"	xor	edi, edi\n"
 	"	syscall\n"
+	;
+static const char *pointer_functions_wrap =
 	// safely increment the pointer
 	// u64 increment_pointer(u64 ptr, u64 amount)
 	"increment_pointer:\n"
 	"	add	rdi, rsi\n"
 	"	mov	rax, rdi\n"
 	"	xor	edx, edx\n"
-	"	mov	rcx, " STR(ARRAY_SIZE) "\n"
+	"	mov	rcx, qword ptr [array_size]\n"
 	"	div	rcx\n" // rax = rdx:rax / arg, rdx = rdx:rax % arg
 	"	mov	rax, rdx\n"
 	"	ret\n"
@@ -132,24 +134,44 @@ static const char *assembly_end =
 	// u64 decrement_pointer(u64 ptr, u64 amount)
 	"decrement_pointer:\n"
 	// reduce amount modulo array size
-	"	mov	rcx, " STR(ARRAY_SIZE) "\n"
 	"	xor	edx, edx\n"
 	"	mov	rax, rsi\n"
-	"	div	rcx\n"
-	"	mov	rsi, rdx\n"
-
-	"	cmp	rdi, rsi\n"
+	"	div	qword ptr [array_size]\n"
+	"	cmp	rdi, rdx\n"
 	"	jb	decrement_pointer_underflow\n"
-	"	sub	rdi, rsi\n"
+
+	"	sub	rdi, rdx\n"
 	"	mov	rax, rdi\n"
 	"	ret\n"
 	"decrement_pointer_underflow:\n"
-	"	sub	rsi, rdi\n"
-	"	mov	rdi, " STR(ARRAY_SIZE) "\n"
-	"	sub	rdi, rsi\n"
+	"	sub	rdx, rdi\n"
+	"	mov	rdi, qword ptr [array_size]\n"
+	"	sub	rdi, rdx\n"
+	"	mov	rax, rdi\n"
+	"	ret\n"
+	;
+static const char *pointer_functions_abort =
+	"pointer_abort:\n"
+	"	mov	rax, 60\n"
+	"	mov	rdi, 43\n"
+	"	syscall\n"
+	// u64 increment_pointer(u64 ptr, u64 amount)
+	"increment_pointer:\n"
+	"	add	rdi, rsi\n"
+	"	cmp	rdi, qword ptr [array_size]\n"
+	"	jae	pointer_abort\n"
 	"	mov	rax, rdi\n"
 	"	ret\n"
 
+	// u64 decrement_pointer(u64 ptr, u64 amount)
+	"decrement_pointer:\n"
+	"	sub	rdi, rsi\n"
+	"	cmp	rdi, qword ptr [array_size]\n"
+	"	jae	pointer_abort\n"
+	"	mov	rax, rdi\n"
+	"	ret\n"
+	;
+static const char *read_write_functions =
 	// void do_write(u64 ptr, u64 buf_addr)
 	"do_write:\n"
 	"	add	rsi, rdi\n"
