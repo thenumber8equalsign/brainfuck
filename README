@@ -8,3 +8,4 @@ https://copy.sh/brainfuck
 
 TODO: in the assembly, write special functions for incrementing and decrementing
 the pointer by 1, that way better performance by less divisions
+TODO: optimize more stuff like [-]
