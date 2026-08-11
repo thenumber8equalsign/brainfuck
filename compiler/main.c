@@ -10,9 +10,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#include <string>
-
-#include <brainfuck.hpp>
+#include <brainfuck.h>
 #include <compiler.h>
 
 // flags for compiler options
@@ -71,14 +69,16 @@ int main(int argc, char **argv)
 	char output_pathname[PATH_MAX] = "./a.out";
 	char brainfuck_pathname[PATH_MAX];
 	const char *pointer_behavior = "wrap";
+	int ret;
+	uint32_t option_flags = 0;
+	int opt = 0;
+	int bf_fd;
+	struct __array assembly_output;
 
 	output_pathname[PATH_MAX - 1] = 0;
 	brainfuck_pathname[PATH_MAX - 1] = 0;
 
 	strcpy(brainfuck_pathname, "./app2.bf");
-
-	uint32_t option_flags = 0;
-	int opt = 0;
 
 	while ((opt = getopt(argc, argv, "So:hOB:")) != -1) {
 		switch (opt) {
@@ -126,21 +126,32 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
-	int bf_fd = open(brainfuck_pathname, O_RDONLY);
+	bf_fd = open(brainfuck_pathname, O_RDONLY);
 	if (bf_fd == -1) {
 		err(EXIT_FAILURE, "can not access %s", brainfuck_pathname);
 	}
 
-	std::string assembly_output;
+	ret = array_init(&assembly_output);
+	if (ret != 0) {
+		warn("could not init");
+		return -1;
+	}
 
-	compile_brainfuck(&assembly_output, bf_fd, &options);
+
+	ret = compile_brainfuck(&assembly_output, bf_fd, &options);
+	if (ret != 0) {
+		array_free(&assembly_output);
+		warnx("could not compile");
+		return -1;
+	}
 	close(bf_fd);
 
 	if ((option_flags & FL_OUTPUT_ASSEMBLY) == 0) {
-		assemble_and_link(assembly_output.c_str(), output_pathname);
+		assemble_and_link(assembly_output.data, output_pathname);
 	} else {
-		output_to_file(assembly_output.c_str(), output_pathname);
+		output_to_file(assembly_output.data, output_pathname);
 	}
 
+	array_free(&assembly_output);
 	return 0;
 }

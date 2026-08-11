@@ -1,4 +1,5 @@
 // Brainfuck compiler for linux AMD64
+#include <arrays.h>
 #include <assert.h>
 #include <limits.h>
 #include <stdlib.h>
@@ -11,11 +12,7 @@
 #include <sys/mman.h>
 #include <stdbool.h>
 
-#include <vector>
-
-#include <brainfuck.hpp>
-
-extern "C" {
+#include <brainfuck.h>
 
 /**
  * struct brainfuck_instruction - a single, or repeated brainfuck instruction
@@ -121,7 +118,7 @@ void instruction_to_assembly(const struct brainfuck_instruction *instruction,
 		const char *format = "\tmov	rdi, r12\n"
 				     "\tmov	rsi, rbx\n"
 				     "\tcall	do_read\n";
-		sprintf(str, format);
+		sprintf(str, "%s", format);
 		return;
 	}
 
@@ -129,7 +126,7 @@ void instruction_to_assembly(const struct brainfuck_instruction *instruction,
 		const char *format = "\tmov	rdi, r12\n"
 				     "\tmov	rsi, rbx\n"
 				     "\tcall	do_write\n";
-		sprintf(str, format);
+		sprintf(str, "%s", format);
 		return;
 	}
 
@@ -148,17 +145,16 @@ void instruction_to_assembly(const struct brainfuck_instruction *instruction,
  * Return: the pointer to the corrosponding open brace, or NULL
  */
 static const struct brainfuck_instruction *
-find_open_brace(const std::vector<struct brainfuck_instruction> *instrs,
-		size_t index)
+find_open_brace(const struct brainfuck_instruction *instrs, size_t index)
 {
 	--index;
 	size_t num_loops = 0;
 	while (index != __SIZE_MAX__) {
-		if ((*instrs)[index].instruction == '[' && num_loops == 0)
+		if (instrs[index].instruction == '[' && num_loops == 0)
 			break;
-		else if ((*instrs)[index].instruction == ']')
+		else if (instrs[index].instruction == ']')
 			++num_loops;
-		else if ((*instrs)[index].instruction == '[' && num_loops != 0)
+		else if (instrs[index].instruction == '[' && num_loops != 0)
 			--num_loops;
 
 		--index;
@@ -167,7 +163,7 @@ find_open_brace(const std::vector<struct brainfuck_instruction> *instrs,
 	if (index == __SIZE_MAX__)
 		return NULL;
 
-	return &(instrs->at(index));
+	return &(instrs[index]);
 }
 
 /**
@@ -199,8 +195,7 @@ static bool is_optimizable_instruction(char instruction)
 	       instruction == '>';
 }
 
-static bool can_optimize(const std::vector<struct brainfuck_instruction> &in,
-			 size_t i)
+static bool can_optimize(const struct brainfuck_instruction *in, size_t i)
 {
 	return in[i - 1].instruction == in[i].instruction &&
 	       is_optimizable_instruction(in[i].instruction);
@@ -214,30 +209,56 @@ static bool is_opposite_instruction(char a, char b)
 
 /**
  * compile_brainfuck() - given a file descriptor, convert bf into assembly
- * @assembly_str: the string for the assembly to go to, everything in it will be
- *	overwritten
+ * @assembly_str: the string for the assembly to go to
+ * 	it is assumed that this is empty with length = 0
  * @fd: the file descriptor to the brainfuck code
  * @options: brainfuck options, see definition for documentation
  *
  * Context: might take a long time, but it shouldn't sleep, it also might
  * 	exit the program because of err()
  *
- * Return: none
+ * Return: 0 on success, -1 on error
  */
-void compile_brainfuck(std::string *assembly_str, const int fd,
-		       const struct compiler_options *options)
+int compile_brainfuck(struct __array *assembly_str, const int fd,
+		      const struct compiler_options *options)
 {
 	if (lseek(fd, 0, SEEK_SET) == -1) {
 		err(EXIT_FAILURE, "lseek");
 	}
 
-	std::vector<struct brainfuck_instruction> instructions;
+	int ret;
+	struct __array instructions;
+	struct brainfuck_instruction *instr_data;
+	size_t instr_len;
 
-	instructions.reserve(1000);
+	ret = array_init(&instructions);
+	if (ret != 0) {
+		warn("could not init");
+		return -1;
+	}
 
-	*assembly_str = "";
-	assembly_str->append(assembly_begin);
-	assembly_str->reserve(500000);
+	ret = array_reserve(&instructions,
+			    sizeof(struct brainfuck_instruction) * 1000);
+	if (ret != 0) {
+		warn("could not reserve");
+		array_free(&instructions);
+		return -1;
+	}
+
+	ret = array_reserve(assembly_str, 500000);
+	if (ret != 0) {
+		warn("could not reserve");
+		array_free(&instructions);
+		return -1;
+	}
+
+	ret = array_append_bulk(assembly_str, assembly_begin,
+				strlen(assembly_begin));
+	if (ret != 0) {
+		warn("could not append");
+		array_free(&instructions);
+		return -1;
+	}
 
 	// parse brainfuck
 	for (size_t loop_counter = 0, i = 0;;) {
@@ -266,8 +287,10 @@ void compile_brainfuck(std::string *assembly_str, const int fd,
 		}
 
 		if (instruction == ']') {
-			instr.corrosponding_open =
-				find_open_brace(&instructions, i);
+			instr.corrosponding_open = find_open_brace(
+				(const struct brainfuck_instruction *)
+					instructions.data,
+				i);
 
 			if (instr.corrosponding_open == NULL) {
 				fprintf(stderr, "invalid brainfuck\n");
@@ -277,32 +300,43 @@ void compile_brainfuck(std::string *assembly_str, const int fd,
 			instr.loop_index = instr.corrosponding_open->loop_index;
 		}
 
-		instructions.push_back(instr);
+		const char *_instr_data = (const char *)(&instr);
+
+		ret = array_append_bulk(&instructions, _instr_data,
+					sizeof(instr));
+
+		if (ret != 0) {
+			warn("could not append");
+			array_free(&instructions);
+			return -1;
+		}
 		++i;
 	}
 
 	// apply optimizations
-	for (size_t i = 1; i < instructions.size() && options->optimize; ++i) {
-		const char prev = instructions[i - 1].instruction;
-		const char cur = instructions[i].instruction;
+	instr_data = (struct brainfuck_instruction *)instructions.data;
+	instr_len = instructions.length / sizeof(struct brainfuck_instruction);
+	for (size_t i = 1; i < instr_len && options->optimize; ++i) {
+		const char prev = instr_data[i - 1].instruction;
+		const char cur = instr_data[i].instruction;
 
 		if (!is_optimizable_instruction(cur) ||
 		    !is_optimizable_instruction(prev))
 			continue;
 
 		if (prev == cur && is_optimizable_instruction(cur)) {
-			instructions[i].repetitions +=
-				instructions[i - 1].repetitions;
+			instr_data[i].repetitions +=
+				instr_data[i - 1].repetitions;
 
-			instructions[i - 1].repetitions = 0;
+			instr_data[i - 1].repetitions = 0;
 			continue;
 		}
 
 		if (!is_opposite_instruction(prev, cur))
 			continue;
 
-		size_t *cur_rep = &instructions[i].repetitions;
-		size_t *prev_rep = &instructions[i - 1].repetitions;
+		size_t *cur_rep = &instr_data[i].repetitions;
+		size_t *prev_rep = &instr_data[i - 1].repetitions;
 
 		if (*prev_rep > *cur_rep) {
 			*prev_rep -= *cur_rep;
@@ -319,23 +353,56 @@ void compile_brainfuck(std::string *assembly_str, const int fd,
 	}
 
 	// convert to assembly
-	for (size_t i = 0; i < instructions.size(); ++i) {
-		if (instructions[i].repetitions == 0)
+	for (size_t i = 0; i < instr_len; ++i) {
+		if (instr_data[i].repetitions == 0)
 			continue;
 
 		char buf[256];
-		instruction_to_assembly(&instructions[i], buf, options);
+		instruction_to_assembly(&instr_data[i], buf, options);
 
-		assembly_str->append(buf);
+		ret = array_append_bulk(assembly_str, buf, strlen(buf));
+		if (ret != 0) {
+			warn("could not append");
+			array_free(&instructions);
+			return -1;
+		}
 	}
 
-	assembly_str->append(assembly_end);
+	array_free(&instructions);
+	instr_data = NULL;
+	instr_len = 0;
+
+	ret = array_append_bulk(assembly_str, assembly_end,
+				strlen(assembly_end));
+	if (ret != 0) {
+		warn("could not append");
+	}
+
+	const char *pointer_functions = NULL;
+
 	if (options->overflow == POINTER_WRAP) {
-		assembly_str->append(pointer_functions_wrap);
+		pointer_functions = pointer_functions_wrap;
 	} else if (options->overflow == POINTER_ABORT) {
-		assembly_str->append(pointer_functions_abort);
+		pointer_functions = pointer_functions_abort;
+	} else if (options->overflow != POINTER_UNDEFINED) {
+		fprintf(stderr, "invalid option for overflow behavior\n");
+		return -1;
 	}
 
-	assembly_str->append(read_write_functions);
-}
+	if (pointer_functions != NULL) {
+		ret = array_append_bulk(assembly_str, pointer_functions,
+					strlen(pointer_functions));
+		if (ret != 0) {
+			warn("could not append");
+			return -1;
+		}
+	}
+
+	ret = array_append_bulk(assembly_str, read_write_functions, strlen(read_write_functions));
+	if (ret != 0) {
+		warn("could not append");
+		return -1;
+	}
+
+	return 0;
 }

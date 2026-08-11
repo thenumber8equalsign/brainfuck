@@ -6,6 +6,5 @@ that's all!
 brainfuck examples:
 https://copy.sh/brainfuck
 
-TODO: no more c++ (i just wanted std::vector<>)
 TODO: in the assembly, write special functions for incrementing and decrementing
 the pointer by 1, that way better performance by less divisions

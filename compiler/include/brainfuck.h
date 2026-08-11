@@ -10,8 +10,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <stdbool.h>
-
-#include <string>
+#include <arrays.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,17 +43,17 @@ struct compiler_options {
 
 /**
  * compile_brainfuck() - given a file descriptor, convert bf into assembly
- * @assembly_str: the string for the assembly to go to, everything in it will be
- *	overwritten
+ * @assembly_str: the string for the assembly to go to
+ * 	it is assumed that this is empty with length = 0
  * @fd: the file descriptor to the brainfuck code
- * @options: compiler options, see declaration for documentation
+ * @options: brainfuck options, see definition for documentation
  *
  * Context: might take a long time, but it shouldn't sleep, it also might
  * 	exit the program because of err()
  *
- * Return: none
+ * Return: 0 on success, -1 on error
  */
-void compile_brainfuck(std::string *assembly_str, const int fd,
+int compile_brainfuck(struct __array *assembly_str, const int fd,
 		       const struct compiler_options *options);
 
 // clang-format off
