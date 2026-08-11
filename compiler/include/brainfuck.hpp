@@ -77,7 +77,7 @@ static const char *assembly_begin =
 	// are initialized to zero, so no initialization is needed
 	"	mov	rax, 9\n"
 	"	xor	edi, edi\n"
-	"	mov	rsi, qword ptr [array_size]\n"
+	"	mov	rsi, qword ptr [rip + array_size]\n"
 	"	mov	rdx, 0x3\n"
 	"	mov	r10, 0x22\n"
 	"	mov	r8, -1\n"
@@ -110,7 +110,7 @@ static const char *assembly_begin =
 static const char *assembly_end =
 	"	mov	rax, 11\n"
 	"	mov	rdi, qword [rbp-8]\n"
-	"	mov	rsi, qword ptr [array_size]\n"
+	"	mov	rsi, qword ptr [rip + array_size]\n"
 	"	syscall\n"
 	"	mov	rsp, rbp\n"
 	"	pop	rbp\n"
@@ -125,7 +125,7 @@ static const char *pointer_functions_wrap =
 	"	add	rdi, rsi\n"
 	"	mov	rax, rdi\n"
 	"	xor	edx, edx\n"
-	"	mov	rcx, qword ptr [array_size]\n"
+	"	mov	rcx, qword ptr [rip + array_size]\n"
 	"	div	rcx\n" // rax = rdx:rax / arg, rdx = rdx:rax % arg
 	"	mov	rax, rdx\n"
 	"	ret\n"
@@ -136,7 +136,7 @@ static const char *pointer_functions_wrap =
 	// reduce amount modulo array size
 	"	xor	edx, edx\n"
 	"	mov	rax, rsi\n"
-	"	div	qword ptr [array_size]\n"
+	"	div	qword ptr [rip + array_size]\n"
 	"	cmp	rdi, rdx\n"
 	"	jb	decrement_pointer_underflow\n"
 
@@ -145,7 +145,7 @@ static const char *pointer_functions_wrap =
 	"	ret\n"
 	"decrement_pointer_underflow:\n"
 	"	sub	rdx, rdi\n"
-	"	mov	rdi, qword ptr [array_size]\n"
+	"	mov	rdi, qword ptr [rip + array_size]\n"
 	"	sub	rdi, rdx\n"
 	"	mov	rax, rdi\n"
 	"	ret\n"
@@ -158,7 +158,7 @@ static const char *pointer_functions_abort =
 	// u64 increment_pointer(u64 ptr, u64 amount)
 	"increment_pointer:\n"
 	"	add	rdi, rsi\n"
-	"	cmp	rdi, qword ptr [array_size]\n"
+	"	cmp	rdi, qword ptr [rip + array_size]\n"
 	"	jae	pointer_abort\n"
 	"	mov	rax, rdi\n"
 	"	ret\n"
@@ -166,7 +166,7 @@ static const char *pointer_functions_abort =
 	// u64 decrement_pointer(u64 ptr, u64 amount)
 	"decrement_pointer:\n"
 	"	sub	rdi, rsi\n"
-	"	cmp	rdi, qword ptr [array_size]\n"
+	"	cmp	rdi, qword ptr [rip + array_size]\n"
 	"	jae	pointer_abort\n"
 	"	mov	rax, rdi\n"
 	"	ret\n"
