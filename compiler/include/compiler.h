@@ -39,7 +39,8 @@ int output_to_file(const char *str, const char *pathname);
  * and wait for those processes to complete, these processes will run /bin/as
  * and /bin/ld
  *
- * Return: 0 on success, -1 on error and errno will be set
+ * Return: 0 on success, -1 for library/system call error with errno being set,
+ * any other nonzero value for another kind of error
  */
 int assemble_and_link(const char *assembly_str,
 		      const char *executable_pathname);

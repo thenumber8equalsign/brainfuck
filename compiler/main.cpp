@@ -5,17 +5,19 @@
 #include <stdint.h>
 #include <string.h>
 #include <err.h>
-#include <errno.h>
 
 #include <linux/limits.h>
 #include <unistd.h>
 #include <fcntl.h>
 
-#include <brainfuck.h>
+#include <string>
+
+#include <brainfuck.hpp>
 #include <compiler.h>
 
 // flags for compiler options
-#define OPT_OUTPUT_ASSEMBLY ((uint32_t)0x1)
+#define FL_OUTPUT_ASSEMBLY ((uint32_t)0x1)
+#define FL_OPTIMIZE ((uint32_t)0x2)
 
 extern char *optarg;
 
@@ -31,9 +33,13 @@ extern char *optarg;
 void print_help(bool use_stderr, const char *argv0)
 {
 	FILE *stream = (use_stderr) ? stderr : stdout;
-	fprintf(stream, "Usage: %s [-S] [-o output] [-h] brainfuck_file\n\n", argv0);
+	fprintf(stream,
+		"Usage: %s [-S] [-o output] [-O] [-h] brainfuck_file\n\n",
+		argv0);
 	fprintf(stream, "\t-S\n\t\toutput assembly only\n");
-	fprintf(stream, "\t-o output\n\t\tspecify output file, the default is ./a.out\n");
+	fprintf(stream,
+		"\t-o output\n\t\tspecify output file, the default is ./a.out\n");
+	fprintf(stream, "\t-O\n\t\tapply simple optimizations\n");
 	fprintf(stream, "\t-h\n\t\tprint this help\n");
 	fprintf(stream, "\n");
 }
@@ -56,13 +62,15 @@ int main(int argc, char **argv)
 	output_pathname[PATH_MAX - 1] = 0;
 	brainfuck_pathname[PATH_MAX - 1] = 0;
 
+	strcpy(brainfuck_pathname, "./app2.bf");
+
 	uint32_t option_flags = 0;
 	int opt = 0;
 
-	while ((opt = getopt(argc, argv, "So:h")) != -1) {
+	while ((opt = getopt(argc, argv, "So:hO")) != -1) {
 		switch (opt) {
 		case 'S':
-			option_flags |= OPT_OUTPUT_ASSEMBLY;
+			option_flags |= FL_OUTPUT_ASSEMBLY;
 			break;
 		case 'o':
 			strncpy(output_pathname, optarg, PATH_MAX);
@@ -70,6 +78,9 @@ int main(int argc, char **argv)
 		case 'h':
 			print_help(false, argv[0]);
 			exit(EXIT_SUCCESS);
+		case 'O':
+			option_flags |= FL_OPTIMIZE;
+			break;
 		case '?':
 		default:
 			print_help(true, argv[0]);
@@ -89,25 +100,16 @@ int main(int argc, char **argv)
 		err(EXIT_FAILURE, "can not access %s", brainfuck_pathname);
 	}
 
-	char *assembly_output = malloc(ASSEMBLY_MAX_SIZE);
-	if (assembly_output == NULL) {
-		int e = errno;
-		close(bf_fd);
-		errno = e;
-		err(EXIT_FAILURE, "malloc");
-	}
+	std::string assembly_output;
 
-	compile_brainfuck(assembly_output, bf_fd);
+	compile_brainfuck(&assembly_output, bf_fd, option_flags & FL_OPTIMIZE);
 	close(bf_fd);
 
-	if ((option_flags & OPT_OUTPUT_ASSEMBLY) == 0) {
-		assemble_and_link(assembly_output, output_pathname);
+	if ((option_flags & FL_OUTPUT_ASSEMBLY) == 0) {
+		assemble_and_link(assembly_output.c_str(), output_pathname);
 	} else {
-		output_to_file(assembly_output, output_pathname);
+		output_to_file(assembly_output.c_str(), output_pathname);
 	}
 
-
-	free(assembly_output);
-	assembly_output = NULL;
 	return 0;
 }

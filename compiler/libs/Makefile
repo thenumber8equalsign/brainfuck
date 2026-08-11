@@ -1,6 +1,6 @@
 target:
 	mkdir -p $(BUILD_DIR)
-	$(CC) -c brainfuck.c -o $(BUILD_DIR)/brainfuck.o $(CFLAGS) -I $(INCLUDE)
+	$(CXX) -c brainfuck.cpp -o $(BUILD_DIR)/brainfuck.o $(CXXFLAGS) -I $(INCLUDE)
 	$(CC) -c compiler.c -o $(BUILD_DIR)/compiler.o $(CFLAGS) -I $(INCLUDE)
 
 clean:

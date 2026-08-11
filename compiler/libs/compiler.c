@@ -66,14 +66,14 @@ int output_to_file(const char *str, const char *pathname)
 int handle_child_process(const char *pathname, const char *output_pathname,
 			 bool assemble)
 {
-	char *executable_path = NULL;
+	const char *executable_path = NULL;
 	if (assemble) {
 		executable_path = "/bin/as";
 	} else {
 		executable_path = "/bin/ld";
 	}
 
-	// ensure the output file does not already exist
+	// ensure the output file does not already exist, only if assembling
 	struct stat s;
 	int r = stat(output_pathname, &s);
 	if (r == -1 && errno != ENOENT) {
@@ -81,7 +81,7 @@ int handle_child_process(const char *pathname, const char *output_pathname,
 		warn("can not stat %s", output_pathname);
 		errno = e;
 		return -1;
-	} else if (r != -1) {
+	} else if (r != -1 && assemble) {
 		warnx("output file %s already exists", output_pathname);
 		errno = EEXIST;
 		return -1;
@@ -110,7 +110,8 @@ int handle_child_process(const char *pathname, const char *output_pathname,
  * and wait for those processes to complete, these processes will run /bin/as
  * and /bin/ld
  *
- * Return: 0 on success, -1 on error and errno will be set
+ * Return: 0 on success, -1 for library/system call error with errno being set,
+ * any other nonzero value for another kind of error
  */
 int assemble_and_link(const char *assembly_str, const char *executable_pathname)
 {
@@ -128,7 +129,7 @@ int assemble_and_link(const char *assembly_str, const char *executable_pathname)
 	snprintf(object_pathname, PATH_MAX, "/tmp/brainfuck_%lld.o",
 		 (long long)seconds);
 
-	int as_fd = open(assembly_pathname, O_CREAT | O_EXCL | O_WRONLY);
+	int as_fd = open(assembly_pathname, O_CREAT | O_EXCL | O_WRONLY, 00644);
 	if (as_fd == -1 && errno != EEXIST) {
 		int e = errno;
 		warn("can not open %s", assembly_pathname);
@@ -151,7 +152,6 @@ int assemble_and_link(const char *assembly_str, const char *executable_pathname)
 
 	pid_t child_pid = fork();
 	if (child_pid == -1) {
-		errno = ECHILD;
 		return -1;
 	}
 
@@ -160,16 +160,22 @@ int assemble_and_link(const char *assembly_str, const char *executable_pathname)
 		exit(EXIT_FAILURE);
 	}
 
-	if (waitpid(child_pid, NULL, 0) == -1) {
+	int status = 0;
+
+	if (waitpid(child_pid, &status, 0) == -1) {
 		warn("waitpid");
 		return -1;
 	}
 
 	unlink(assembly_pathname);
 
+	if (WEXITSTATUS(status) != 0) {
+		fprintf(stderr, "could not assemble\n");
+		return 1;
+	}
+
 	child_pid = fork();
 	if (child_pid == -1) {
-		errno = ECHILD;
 		return -1;
 	}
 
@@ -179,11 +185,17 @@ int assemble_and_link(const char *assembly_str, const char *executable_pathname)
 		exit(EXIT_FAILURE);
 	}
 
-	if (waitpid(child_pid, NULL, 0) == -1) {
+	if (waitpid(child_pid, &status, 0) == -1) {
 		warn("waitpid");
 		return -1;
 	}
 
 	unlink(object_pathname);
+
+	if (WEXITSTATUS(status) != 0) {
+		fprintf(stderr, "could not link\n");
+		return 2;
+	}
+
 	return 0;
 }

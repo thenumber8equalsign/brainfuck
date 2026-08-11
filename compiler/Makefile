@@ -1,14 +1,19 @@
 export CC = gcc
-export CFLAGS = -O2
+export CXX = g++
+
+export COMMON_FLAGS = -O0
+export CFLAGS = $(COMMON_FLAGS)
+export CXXFLAGS = $(COMMON_FLAGS)
+
 export INCLUDE = $(abspath ./include/)
 export BUILD_DIR = ./build/
 
 all: lib compiler
 
 compiler: lib
-	$(CC) -c main.c -o $(BUILD_DIR)/main.o $(CFLAGS) -I $(INCLUDE)
+	$(CXX) -c main.cpp -o $(BUILD_DIR)/main.o $(CFLAGS) -I $(INCLUDE)
 
-	$(CC) $(BUILD_DIR)/*.o -o $(BUILD_DIR)/compiler
+	$(CXX) $(BUILD_DIR)/*.o -o $(BUILD_DIR)/compiler
 
 lib:
 	mkdir -p $(BUILD_DIR)

@@ -2,20 +2,60 @@
 #ifndef __BRAINFUCK_H__
 #define __BRAINFUCK_H__
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #define _STR(x) #x
 #define STR(x) _STR(x)
 
-#define BUFFER_SIZE 30000
-#define ASSEMBLY_MAX_SIZE 1000000000
-#define MAX_NUMBER_OF_LOOPS 10000000
+#define ARRAY_SIZE 30000
 
 #include <unistd.h>
 #include <sys/types.h>
 #include <stdbool.h>
+
+#include <string>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+ * enum pointer_behivor - what to do when the pointer goes out of scope
+ * @POINTER_UNDEFINED: anything goes
+ * @POINTER_WRAP: wrap, by reducing the index modulo ARRAY_SIZE, and some other
+ * 	logic for decreasing it
+ * @POINTER_ABORT: call SYS_exit(43). Why 43? because it is
+ * 	Sheldon Cooper's record for how many times he could kick the ball
+ * 	(S6E8 The 43 Peculiarity)
+ */
+enum pointer_behavior {
+	POINTER_UNDEFINED,
+	POINTER_WRAP,
+	POINTER_ABORT,
+};
+
+/**
+ * struct compiler_options - options for the brainfuck compiler
+ * @optimize: apply simple optimizations, like compressing -+, and ><
+ * @overflow: behavior on what to do when the pointer overflows
+ */
+struct compiler_options {
+	_Bool optimize;
+	enum pointer_behavior overflow;
+};
+
+/**
+ * compile_brainfuck() - given a file descriptor, convert bf into assembly
+ * @assembly_str: the string for the assembly to go to, everything in it will be
+ *	overwritten
+ * @fd: the file descriptor to the brainfuck code
+ * @options: compiler options, see declaration for documentation
+ *
+ * Context: might take a long time, but it shouldn't sleep, it also might
+ * 	exit the program because of err()
+ *
+ * Return: none
+ */
+void compile_brainfuck(std::string *assembly_str, const int fd,
+		       const struct compiler_options *options);
 
 // clang-format off
 // This is the assembly "boilerplate", generated code from
@@ -30,13 +70,13 @@ static const char *assembly_begin =
 
 	".section .text\n"
 	"_start:\n"
-	// mmap(NULL, BUFFER_SIZE,
+	// mmap(NULL, ARRAY_SIZE,
 	// PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0)
 	// also, according to man 2 mmap, with MAP_ANON, the mapping's contents
 	// are initialized to zero, so no initialization is needed
 	"	mov	rax, 9\n"
 	"	xor	edi, edi\n"
-	"	mov	rsi, " STR(BUFFER_SIZE) "\n"
+	"	mov	rsi, " STR(ARRAY_SIZE) "\n"
 	"	mov	rdx, 0x3\n"
 	"	mov	r10, 0x22\n"
 	"	mov	r8, -1\n"
@@ -62,7 +102,7 @@ static const char *assembly_begin =
 	"	xor	r12d, r12d\n"
 	"// GENERATED_CODE:\n";
 	// generated code goes here
-	// rbx is containing the address of the buffer
+	// rbx is containing the address of the array
 	// r12 is containing the movable pointer
 
 // this is to follow the generated code
@@ -70,7 +110,7 @@ static const char *assembly_end =
 	"// ASSEMBLY_END:\n"
 	"	mov	rax, 11\n"
 	"	mov	rdi, qword [rbp-8]\n"
-	"	mov	rsi, " STR(BUFFER_SIZE) "\n"
+	"	mov	rsi, " STR(ARRAY_SIZE) "\n"
 	"	syscall\n"
 	"	mov	rsp, rbp\n"
 	"	pop	rbp\n"
@@ -78,32 +118,38 @@ static const char *assembly_end =
 	"	xor	edi, edi\n"
 	"	syscall\n"
 	// safely increment the pointer
-	// u64 increment_pointer(u64 ptr)
+	// u64 increment_pointer(u64 ptr, u64 amount)
 	"increment_pointer:\n"
-	"	inc	rdi\n"
-	// cmp can not be used with 64 bit immidates, but mov can,
-	// just in case one may want more than 4 billion length
-	"	mov	rsi, " STR(BUFFER_SIZE) "\n"
-	"	cmp	rdi, rsi\n"
-	"	jae	increment_zero\n"
+	"	add	rdi, rsi\n"
 	"	mov	rax, rdi\n"
-	"	ret\n"
-	"increment_zero:\n"
-	"	xor	eax, eax\n"
+	"	xor	edx, edx\n"
+	"	mov	rcx, " STR(ARRAY_SIZE) "\n"
+	"	div	rcx\n" // rax = rdx:rax / arg, rdx = rdx:rax % arg
+	"	mov	rax, rdx\n"
 	"	ret\n"
 
 	// decrement the pointer safely
-	// u64 decrement_pointer(u64 ptr)
+	// u64 decrement_pointer(u64 ptr, u64 amount)
 	"decrement_pointer:\n"
-	"	test	rdi, rdi\n"
-	"	jz	decrement_zero\n"
-	"	dec	rdi\n"
+	// reduce amount modulo array size
+	"	mov	rcx, " STR(ARRAY_SIZE) "\n"
+	"	xor	edx, edx\n"
+	"	mov	rax, rsi\n"
+	"	div	rcx\n"
+	"	mov	rsi, rdx\n"
+
+	"	cmp	rdi, rsi\n"
+	"	jb	decrement_pointer_underflow\n"
+	"	sub	rdi, rsi\n"
 	"	mov	rax, rdi\n"
 	"	ret\n"
-	"decrement_zero:\n"
-	"	mov	rax, " STR(BUFFER_SIZE) "\n"
-	"	dec	rax\n"
+	"decrement_pointer_underflow:\n"
+	"	sub	rsi, rdi\n"
+	"	mov	rdi, " STR(ARRAY_SIZE) "\n"
+	"	sub	rdi, rsi\n"
+	"	mov	rax, rdi\n"
 	"	ret\n"
+
 	// void do_write(u64 ptr, u64 buf_addr)
 	"do_write:\n"
 	"	add	rsi, rdi\n"
@@ -140,40 +186,6 @@ static const char *assembly_end =
 	"	ret\n"
 	;
 // clang-format on
-
-/**
- * struct loop_brace - brainfuck loop
- * @bf_file_offset: the offset into the brainfuck source file
- *                  where the character (either '[' or ']') is
- * @loop_index: the loop's identifier (0-indexed, used for
- *              assembly label creation)
- * @corrosponding_open: if the struct loop is a close_loop,
- *                      the pointer to the corrosponding
- *                      '[' struct, NULL otherwise
- * @open: true if the loop_brace represents a '[',
- *        false otherwise
- *
- * an array of this structure shall be used to represent all the loops
- * in a brainfuck program
- */
-struct loop_brace {
-	off_t bf_file_offset;
-	size_t loop_index;
-	struct loop_brace *corrosponding_open;
-	_Bool open;
-};
-
-/**
- * compile_brainfuck() - given a file descriptor, convert bf into assembly
- * @assembly_str: the string for the assembly to go to, everything in it will be
- *	overwritten
- * @fd: the file descriptor to the brainfuck code
- *
- * Context: might take a long time, but it shouldn't sleep
- *
- * Return: none
- */
-void compile_brainfuck(char *assembly_str, int fd);
 
 #ifdef __cplusplus
 }
