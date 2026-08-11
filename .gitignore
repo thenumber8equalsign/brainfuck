@@ -2,3 +2,5 @@ build/
 .clangd
 a.out
 .zed
+*.s
+*.o
