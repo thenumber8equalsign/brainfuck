@@ -102,7 +102,10 @@ int main(int argc, char **argv)
 
 	std::string assembly_output;
 
-	compile_brainfuck(&assembly_output, bf_fd, option_flags & FL_OPTIMIZE);
+	struct compiler_options options;
+	options.optimize = option_flags & FL_OPTIMIZE;
+
+	compile_brainfuck(&assembly_output, bf_fd, &options);
 	close(bf_fd);
 
 	if ((option_flags & FL_OUTPUT_ASSEMBLY) == 0) {
