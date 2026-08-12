@@ -28,6 +28,9 @@ int array_init(struct __array *arr)
  */
 int array_free(struct __array *arr)
 {
+	if (arr->data == NULL)
+		return 0;
+
 	free((void *)(arr->data));
 	arr->data = NULL;
 	arr->capacity = 0;

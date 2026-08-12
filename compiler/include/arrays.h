@@ -41,6 +41,8 @@ int array_init(struct __array *arr);
  * array_free() - free an array
  * @arr: the arr to free
  *
+ * If arr->data is NULL, then nothing happens, and success is returned
+ *
  * Return: 0 on success, -1 on library error, and errno will be set
  */
 int array_free(struct __array *arr);
