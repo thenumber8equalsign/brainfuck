@@ -1,8 +1,3 @@
-[+[[<]]
-+++.
---.,
-[>]
-]
 [
 the following is from
 https://copy.sh/brainfuck

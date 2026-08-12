@@ -16,13 +16,16 @@
 
 /**
  * struct brainfuck_instruction - a single, or repeated brainfuck instruction
- * @instr: the character for the instruction
+ * @instr: the character for the instruction, for extra instructions see below
  * @repetitions: the number of times the instruction is performed in a row
  * 	only useful if it is +, -, <, or >
  * 	a value of 0 will effectively remove the instruction, for all instructions
  * @loop_index: the index of the loop (only useful if instruction is '[' or ']')
  * @corrosponding_open: if instruction is ']', then the pointer to the corrosponding
  * 	open loop instruction
+ *
+ * Extra Instructions (for compiler use only, not in the brainfuck code)
+ * 	'z': zero current cell
  */
 struct brainfuck_instruction {
 	char instruction;
@@ -49,7 +52,7 @@ void instruction_to_assembly(const struct brainfuck_instruction *instruction,
 	if (instruction->repetitions == 0)
 		return;
 
-	const bool undefined_overflow = options->overflow == POINTER_UNDEFINED;
+	const _Bool undefined_overflow = options->overflow == POINTER_UNDEFINED;
 
 	// rbx is containing the address of the array
 	// r12 is containing the pointer
@@ -130,6 +133,12 @@ void instruction_to_assembly(const struct brainfuck_instruction *instruction,
 		return;
 	}
 
+	if (instruction->instruction == 'z') {
+		const char *format = "\tmov	byte ptr [rbx+r12], 0\n";
+		sprintf(str, "%s", format);
+		return;
+	}
+
 	sprintf(str, "");
 }
 
@@ -174,7 +183,7 @@ find_open_brace(const struct brainfuck_instruction *instrs, size_t index)
  *
  * Return: true if instruction is a brainfuck instruction, false otherwise
  */
-static bool is_bf_instruction(char instruction)
+static _Bool is_bf_instruction(char instruction)
 {
 	const char *instrs = "-+<>[],.";
 	for (size_t i = 0; i < strlen(instrs); ++i) {
@@ -184,27 +193,98 @@ static bool is_bf_instruction(char instruction)
 	return false;
 }
 
-static bool is_loop_instruction(char instruction)
+static _Bool is_loop_instruction(char instruction)
 {
 	return instruction == '[' || instruction == ']';
 }
 
-static bool is_optimizable_instruction(char instruction)
+static _Bool is_optimizable_instruction(char instruction)
 {
 	return instruction == '+' || instruction == '-' || instruction == '<' ||
 	       instruction == '>';
 }
 
-static bool can_optimize(const struct brainfuck_instruction *in, size_t i)
-{
-	return in[i - 1].instruction == in[i].instruction &&
-	       is_optimizable_instruction(in[i].instruction);
-}
-
-static bool is_opposite_instruction(char a, char b)
+static _Bool is_opposite_instruction(char a, char b)
 {
 	return (a == '+' && b == '-') || (a == '<' && b == '>') ||
 	       (a == '-' && b == '+') || (a == '>' && b == '<');
+}
+
+// returns the new length
+static size_t optimize_brainfuck(size_t len, struct brainfuck_instruction *instrs)
+{
+	// optimize repeated +, -, <, and >
+	for (size_t i = 1; i < len; ++i) {
+		const char prev = instrs[i - 1].instruction;
+		const char cur = instrs[i].instruction;
+
+		if (!is_optimizable_instruction(cur) ||
+		    !is_optimizable_instruction(prev))
+			continue;
+
+		if (prev == cur && is_optimizable_instruction(cur)) {
+			instrs[i].repetitions += instrs[i - 1].repetitions;
+
+			instrs[i - 1].repetitions = 0;
+			continue;
+		}
+
+		if (!is_opposite_instruction(prev, cur))
+			continue;
+
+		size_t *cur_rep = &instrs[i].repetitions;
+		size_t *prev_rep = &instrs[i - 1].repetitions;
+
+		if (*prev_rep > *cur_rep) {
+			*prev_rep -= *cur_rep;
+
+			*cur_rep = 0;
+		} else if (*prev_rep < *cur_rep) {
+			*cur_rep -= *prev_rep;
+
+			*prev_rep = 0;
+		} else if (*prev_rep == *cur_rep) {
+			*prev_rep = 0;
+			*cur_rep = 0;
+		}
+	}
+
+	// now remove all the instructions with repitition 0
+	for (size_t i = 0; i < len; ++i) {
+		const _Bool val = instrs[i].repetitions == 0;
+
+		for (size_t j = i; j < len - 1 && val; ++j) {
+			instrs[j] = instrs[j + 1];
+		}
+
+		if (val)
+			--len;
+	}
+
+	// optimize anything in the form [+], or [-] as they always
+	// set the current cell to 0
+	for (size_t i = 0; i < len - 2 && len > 2; ++i) {
+		struct brainfuck_instruction *cur = &instrs[i];
+		struct brainfuck_instruction *next = &instrs[i + 1];
+		struct brainfuck_instruction *next_next = &instrs[i + 2];
+
+		// I really don't want to hit that 80 character bar in the if
+		_Bool replace = false;
+		replace = cur->instruction == '[';
+		replace = replace && (next_next->instruction == ']');
+		replace = replace && (next->instruction == '-' ||
+				      next->instruction == '+');
+
+		if (replace) {
+			cur->repetitions = 1;
+			next->repetitions = 0;
+			cur->instruction = 'z';
+			next_next->repetitions = 0;
+			i += 2;
+		}
+	}
+
+	return len;
 }
 
 /**
@@ -316,40 +396,11 @@ int compile_brainfuck(struct __array *assembly_str, const int fd,
 	// apply optimizations
 	instr_data = (struct brainfuck_instruction *)instructions.data;
 	instr_len = instructions.length / sizeof(struct brainfuck_instruction);
-	for (size_t i = 1; i < instr_len && options->optimize; ++i) {
-		const char prev = instr_data[i - 1].instruction;
-		const char cur = instr_data[i].instruction;
-
-		if (!is_optimizable_instruction(cur) ||
-		    !is_optimizable_instruction(prev))
-			continue;
-
-		if (prev == cur && is_optimizable_instruction(cur)) {
-			instr_data[i].repetitions +=
-				instr_data[i - 1].repetitions;
-
-			instr_data[i - 1].repetitions = 0;
-			continue;
-		}
-
-		if (!is_opposite_instruction(prev, cur))
-			continue;
-
-		size_t *cur_rep = &instr_data[i].repetitions;
-		size_t *prev_rep = &instr_data[i - 1].repetitions;
-
-		if (*prev_rep > *cur_rep) {
-			*prev_rep -= *cur_rep;
-
-			*cur_rep = 0;
-		} else if (*prev_rep < *cur_rep) {
-			*cur_rep -= *prev_rep;
-
-			*prev_rep = 0;
-		} else if (*prev_rep == *cur_rep) {
-			*prev_rep = 0;
-			*cur_rep = 0;
-		}
+	if (options->optimize) {
+		size_t new_len = optimize_brainfuck(instr_len, instr_data);
+		instructions.length =
+			new_len * sizeof(struct brainfuck_instruction);
+		instr_len = new_len;
 	}
 
 	// convert to assembly
@@ -398,7 +449,8 @@ int compile_brainfuck(struct __array *assembly_str, const int fd,
 		}
 	}
 
-	ret = array_append_bulk(assembly_str, read_write_functions, strlen(read_write_functions));
+	ret = array_append_bulk(assembly_str, read_write_functions,
+				strlen(read_write_functions));
 	if (ret != 0) {
 		warn("could not append");
 		return -1;
