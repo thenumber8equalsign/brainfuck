@@ -211,7 +211,7 @@ static _Bool is_opposite_instruction(char a, char b)
 }
 
 // returns the new length
-size_t optimize_brainfuck(size_t len, struct brainfuck_instruction *instrs)
+static size_t optimize_brainfuck(size_t len, struct brainfuck_instruction *instrs)
 {
 	// optimize repeated +, -, <, and >
 	for (size_t i = 1; i < len; ++i) {
