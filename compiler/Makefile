@@ -1,6 +1,6 @@
 export CC = gcc
 
-export COMMON_FLAGS = -O0
+export COMMON_FLAGS = -O2
 export CFLAGS = $(COMMON_FLAGS)
 
 export INCLUDE = $(abspath ./include/)
