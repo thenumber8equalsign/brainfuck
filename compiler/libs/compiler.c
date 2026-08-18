@@ -51,40 +51,23 @@ int output_to_file(const char *str, const char *pathname)
  * @assemble: true to assemble, false to link
  *
  * After fork(), this should be called in the child process
+ * This will overwrite the file contents of output_pathname
  *
  * Context: if it works,
  * 	the process is replaced due to the call to exec
  * 	if it fails, -1 may be returned if it didn't get to call exec
  *
- * Return: On success, nothing is returned.
- * 	On error, -1 is returned and errno is set
- *
- * Errors:
- * 	EEXIST: the output file already exists
- * 	other: idk check stat() and execl()
+ * Return: On success, nothing is returned, as the process was completely replaced
+ * 	if the function returns, an error happened
  */
-int handle_child_process(const char *pathname, const char *output_pathname,
-			 bool assemble)
+static int handle_child_process(const char *pathname,
+				const char *output_pathname, bool assemble)
 {
 	const char *executable_path = NULL;
 	if (assemble) {
 		executable_path = "/bin/as";
 	} else {
 		executable_path = "/bin/ld";
-	}
-
-	// ensure the output file does not already exist, only if assembling
-	struct stat s;
-	int r = stat(output_pathname, &s);
-	if (r == -1 && errno != ENOENT) {
-		int e = errno;
-		warn("can not stat %s", output_pathname);
-		errno = e;
-		return -1;
-	} else if (r != -1 && assemble) {
-		warnx("output file %s already exists", output_pathname);
-		errno = EEXIST;
-		return -1;
 	}
 
 	execl(executable_path, executable_path, pathname, "-o", output_pathname,
@@ -96,15 +79,6 @@ int handle_child_process(const char *pathname, const char *output_pathname,
  * assemble_and_link() - assemble an assembly string and link it
  * @assembly_str: the string containing the assembly code
  * @executable_pathname: the pathname for the final executable
- *
- * This function will create two files in /tmp/ which will be called
- * brainfuck_<time>.s and brainfuck_<time>.o, where time is the return value of
- * time(NULL) when the function is entered.
- * These files will then be removed, unless an error occurs somewhere,
- * then they might not be
- *
- * If these files already exists, the function will exit with -1, and errno
- * will be set to EEXIST
  *
  * Context: this will create a child process to assemble and link the files,
  * and wait for those processes to complete, these processes will run /bin/as
@@ -123,20 +97,14 @@ int assemble_and_link(const char *assembly_str, const char *executable_pathname)
 	assembly_pathname[PATH_MAX - 1] = 0;
 	object_pathname[PATH_MAX - 1] = 0;
 
-	snprintf(assembly_pathname, PATH_MAX, "/tmp/brainfuck_%lld.s",
-		 (long long)seconds);
+	snprintf(assembly_pathname, PATH_MAX, "/tmp/brainfuckXXXXXX.s");
+	snprintf(object_pathname, PATH_MAX, "/tmp/brainfuckXXXXXX.o");
 
-	snprintf(object_pathname, PATH_MAX, "/tmp/brainfuck_%lld.o",
-		 (long long)seconds);
-
-	int as_fd = open(assembly_pathname, O_CREAT | O_EXCL | O_WRONLY, 00644);
-	if (as_fd == -1 && errno != EEXIST) {
+	int as_fd = mkstemps(assembly_pathname, 2);
+	if (as_fd == -1) {
 		int e = errno;
-		warn("can not open %s", assembly_pathname);
+		warn("mkstemps");
 		errno = e;
-		return -1;
-	} else if (as_fd == -1 && errno == EEXIST) {
-		errno = EEXIST;
 		return -1;
 	}
 
@@ -149,6 +117,20 @@ int assemble_and_link(const char *assembly_str, const char *executable_pathname)
 	}
 
 	close(as_fd);
+	as_fd = -1;
+
+	// create and get a unique pathname to the object file,
+	// this is only here so that obj_pathname can then be used with
+	// handle_child_process
+	int obj_fd = mkstemps(object_pathname, 2);
+	if (obj_fd == -1) {
+		int e = errno;
+		warn("mkstemps");
+		errno = e;
+		return -1;
+	}
+	close(obj_fd);
+	obj_fd = -1;
 
 	pid_t child_pid = fork();
 	if (child_pid == -1) {
@@ -171,6 +153,7 @@ int assemble_and_link(const char *assembly_str, const char *executable_pathname)
 
 	if (WEXITSTATUS(status) != 0) {
 		fprintf(stderr, "could not assemble\n");
+		unlink(object_pathname);
 		return 1;
 	}
 
