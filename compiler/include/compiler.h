@@ -26,15 +26,6 @@ int output_to_file(const char *str, const char *pathname);
  * @assembly_str: the string containing the assembly code
  * @executable_pathname: the pathname for the final executable
  *
- * This function will create two files in /tmp/ which will be called
- * brainfuck_<time>.s and brainfuck_<time>.o, where time is the return value of
- * time(NULL) when the function is entered.
- * These files will then be removed, unless an error occurs somewhere,
- * then they might not be
- *
- * If these files already exists, the function will exit with -1, and errno
- * will be set to EEXIST
- *
  * Context: this will create a child process to assemble and link the files,
  * and wait for those processes to complete, these processes will run /bin/as
  * and /bin/ld

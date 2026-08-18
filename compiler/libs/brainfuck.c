@@ -19,10 +19,11 @@
  * @instr: the character for the instruction, for extra instructions see below
  * @repetitions: the number of times the instruction is performed in a row
  * 	only useful if it is +, -, <, or >
- * 	a value of 0 will effectively remove the instruction, for all instructions
+ * 	a value of 0 will effectively remove the instruction
+ * 	for all instructions
  * @loop_index: the index of the loop (only useful if instruction is '[' or ']')
- * @corrosponding_open: if instruction is ']', then the pointer to the corrosponding
- * 	open loop instruction
+ * @corrosponding_open: if instruction is ']', then the pointer to the
+ * 	corrosponding open loop instruction
  *
  * Extra Instructions (for compiler use only, not in the brainfuck code)
  * 	'z': zero current cell
@@ -211,7 +212,8 @@ static _Bool is_opposite_instruction(char a, char b)
 }
 
 // returns the new length
-static size_t optimize_brainfuck(size_t len, struct brainfuck_instruction *instrs)
+static size_t optimize_brainfuck(size_t len,
+				 struct brainfuck_instruction *instrs)
 {
 	// optimize repeated +, -, <, and >
 	for (size_t i = 1; i < len; ++i) {

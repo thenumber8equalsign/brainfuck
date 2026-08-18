@@ -45,7 +45,8 @@ int output_to_file(const char *str, const char *pathname)
 }
 
 /**
- * handle_child_process() - execute the assembler or linker depending on assemble
+ * handle_child_process() - execute the assembler or linker depending on
+ * 	@assemble
  * @pathname: the pathname for the assembly or the object file to assemble/link
  * @output_pathname: the output pathname for the operation
  * @assemble: true to assemble, false to link
@@ -57,7 +58,8 @@ int output_to_file(const char *str, const char *pathname)
  * 	the process is replaced due to the call to exec
  * 	if it fails, -1 may be returned if it didn't get to call exec
  *
- * Return: On success, nothing is returned, as the process was completely replaced
+ * Return: On success, nothing is returned, as the process
+ * 	was completely replaced
  * 	if the function returns, an error happened
  */
 static int handle_child_process(const char *pathname,
