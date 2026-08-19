@@ -35,9 +35,12 @@ enum pointer_behavior {
  * struct compiler_options - options for the brainfuck compiler
  * @optimize: apply simple optimizations, like compressing -+, and ><
  * @overflow: behavior on what to do when the pointer overflows
+ * @cell_width: cell width, in bytes, should be one of 1, 2, 4, or 8
+ * 	bad stuff may happen if this is not one of those
  */
 struct compiler_options {
 	_Bool optimize;
+	size_t cell_width;
 	enum pointer_behavior overflow;
 };
 
@@ -77,6 +80,9 @@ static const char *assembly_begin =
 	"	mov	rax, 9\n"
 	"	xor	edi, edi\n"
 	"	mov	rsi, qword ptr [rip + array_size]\n"
+	// we need to multiply based on if we are using 1 byte cells,
+	// or 2 byte cells, or etc
+	"	lea	rsi, qword ptr [rsi%s]\n"
 	"	mov	rdx, 0x3\n"
 	"	mov	r10, 0x22\n"
 	"	mov	r8, -1\n"
@@ -110,6 +116,7 @@ static const char *assembly_end =
 	"	mov	rax, 11\n"
 	"	mov	rdi, qword [rbp-8]\n"
 	"	mov	rsi, qword ptr [rip + array_size]\n"
+	"	lea	rsi, qword ptr [rsi%s]\n"
 	"	syscall\n"
 	"	mov	rsp, rbp\n"
 	"	pop	rbp\n"

@@ -78,6 +78,7 @@ int main(int argc, char **argv)
 	int opt = 0;
 	int bf_fd;
 	struct __array assembly_output;
+	struct compiler_options options;
 
 	output_pathname[PATH_MAX - 1] = 0;
 	brainfuck_pathname[PATH_MAX - 1] = 0;
@@ -115,8 +116,7 @@ int main(int argc, char **argv)
 
 	strncpy(brainfuck_pathname, argv[optind], PATH_MAX);
 
-	struct compiler_options options;
-
+	options.cell_width = 2;
 	options.optimize = option_flags & FL_OPTIMIZE;
 
 	if (strcmp(pointer_behavior, "wrap") == 0) {

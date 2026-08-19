@@ -53,6 +53,52 @@ void instruction_to_assembly(const struct brainfuck_instruction *instruction,
 	if (instruction->repetitions == 0)
 		return;
 
+	const char *word = "byte";
+	const char *multiplier = "";
+	// extra stuff for ensuring that write/read actually prints/read
+	// the proper pointed to value
+	const char *extra_write = "";
+	// Note: the entire pointed to value will be set to 0 prior to reading
+	// to ensure that we zero extend the data read
+	const char *extra_read = "";
+	uint64_t modulo = 1;
+
+	switch (options->cell_width) {
+	case 1:
+		word = "byte";
+		multiplier = "";
+		extra_write = "";
+		extra_read = "";
+		modulo = 1ULL << 8;
+		break;
+	case 2:
+		word = "word";
+		multiplier = "*2";
+		modulo = 1ULL << 16;
+		extra_write = "\tlea\trdi, qword ptr [rdi*2]\n";
+		extra_read = "\tmov\tword ptr [rbx+r12*2], 0\n"
+			     "\tlea\trdi, qword ptr [rdi*2]\n";
+		break;
+	case 4:
+		word = "dword";
+		multiplier = "*4";
+		modulo = 1ULL << 32;
+		extra_write = "\tlea\trdi, qword ptr [rdi*4]\n";
+		extra_read = "\tmov\tdword ptr [rbx+r12*4], 0\n"
+			     "\tlea\trdi, qword ptr [rdi*4]\n";
+		break;
+	case 8:
+		word = "qword";
+		multiplier = "*8";
+		modulo = 1; // qwords will always be modulo 2^64
+		extra_write = "\tlea\trdi, qword ptr [rdi*8]\n";
+		extra_read = "\tmov\tqword ptr [rbx+r12*8], 0\n"
+			     "\tlea\trdi, qword ptr [rdi*8]\n";
+		break;
+	default:
+		break;
+	}
+
 	const _Bool undefined_overflow = options->overflow == POINTER_UNDEFINED;
 
 	// rbx is containing the address of the array
@@ -60,14 +106,16 @@ void instruction_to_assembly(const struct brainfuck_instruction *instruction,
 
 	if (instruction->instruction == '+') {
 		// this works due to distributive property of modulo
-		const char *format = "\tadd	byte ptr [rbx+r12], %zu\n";
-		sprintf(str, format, instruction->repetitions % 256);
+		const char *format = "\tadd	%s ptr [rbx+r12%s], %zu\n";
+		sprintf(str, format, word, multiplier,
+			instruction->repetitions % modulo);
 		return;
 	}
 
 	if (instruction->instruction == '-') {
-		const char *format = "\tsub	byte ptr [rbx+r12], %zu\n";
-		sprintf(str, format, instruction->repetitions % 256);
+		const char *format = "\tsub	%s ptr [rbx+r12%s], %zu\n";
+		sprintf(str, format, word, multiplier,
+			instruction->repetitions % modulo);
 		return;
 	}
 
@@ -100,20 +148,20 @@ void instruction_to_assembly(const struct brainfuck_instruction *instruction,
 	}
 
 	if (instruction->instruction == '[') {
-		const char *format = "\tcmp	byte ptr [rbx+r12], 0\n"
+		const char *format = "\tcmp	%s ptr [rbx+r12%s], 0\n"
 				     "\tjz	END_LOOP_%zu\n"
 				     "BEGIN_LOOP_%zu:\n";
-		sprintf(str, format, instruction->loop_index,
+		sprintf(str, format, word, multiplier, instruction->loop_index,
 			instruction->loop_index);
 
 		return;
 	}
 
 	if (instruction->instruction == ']') {
-		const char *format = "\tcmp	byte ptr [rbx+r12], 0\n"
+		const char *format = "\tcmp	%s ptr [rbx+r12%s], 0\n"
 				     "\tjnz	BEGIN_LOOP_%zu\n"
 				     "END_LOOP_%zu:\n";
-		sprintf(str, format, instruction->loop_index,
+		sprintf(str, format, word, multiplier, instruction->loop_index,
 			instruction->loop_index);
 		return;
 	}
@@ -121,22 +169,24 @@ void instruction_to_assembly(const struct brainfuck_instruction *instruction,
 	if (instruction->instruction == ',') {
 		const char *format = "\tmov	rdi, r12\n"
 				     "\tmov	rsi, rbx\n"
+				     "%s"
 				     "\tcall	do_read\n";
-		sprintf(str, "%s", format);
+		sprintf(str, format, extra_read);
 		return;
 	}
 
 	if (instruction->instruction == '.') {
 		const char *format = "\tmov	rdi, r12\n"
 				     "\tmov	rsi, rbx\n"
+				     "%s"
 				     "\tcall	do_write\n";
-		sprintf(str, "%s", format);
+		sprintf(str, format, extra_write);
 		return;
 	}
 
 	if (instruction->instruction == 'z') {
-		const char *format = "\tmov	byte ptr [rbx+r12], 0\n";
-		sprintf(str, "%s", format);
+		const char *format = "\tmov	%s ptr [rbx+r12%s], 0\n";
+		sprintf(str, format, word, multiplier);
 		return;
 	}
 
@@ -312,6 +362,24 @@ int compile_brainfuck(struct __array *assembly_str, const int fd,
 	struct __array instructions;
 	struct brainfuck_instruction *instr_data;
 	size_t instr_len;
+	char *tmp = NULL;
+	size_t tmp_len = strlen(assembly_begin) + 50;
+	const char *multiplier = "";
+
+	switch (options->cell_width) {
+	case 1:
+		multiplier = "";
+		break;
+	case 2:
+		multiplier = "*2";
+		break;
+	case 4:
+		multiplier = "*4";
+		break;
+	case 8:
+		multiplier = "*8";
+		break;
+	}
 
 	ret = array_init(&instructions);
 	if (ret != 0) {
@@ -334,8 +402,18 @@ int compile_brainfuck(struct __array *assembly_str, const int fd,
 		return -1;
 	}
 
-	ret = array_append_bulk(assembly_str, assembly_begin,
-				strlen(assembly_begin));
+	// add on the multiplyer to assembly_begin, because mmap is in bytes
+	tmp = calloc(tmp_len, sizeof(char));
+	if (tmp == NULL) {
+		warn("calloc");
+		array_free(&instructions);
+		return -1;
+	}
+
+	snprintf(tmp, tmp_len, assembly_begin, multiplier);
+	ret = array_append_bulk(assembly_str, tmp, strlen(tmp));
+	free(tmp);
+	tmp = NULL;
 	if (ret != 0) {
 		warn("could not append");
 		array_free(&instructions);
@@ -425,10 +503,21 @@ int compile_brainfuck(struct __array *assembly_str, const int fd,
 	instr_data = NULL;
 	instr_len = 0;
 
-	ret = array_append_bulk(assembly_str, assembly_end,
-				strlen(assembly_end));
+	tmp_len = strlen(assembly_end) + 50;
+	tmp = calloc(tmp_len, sizeof(char));
+	if (tmp == NULL) {
+		warn("calloc");
+		return -1;
+	}
+
+	snprintf(tmp, tmp_len, assembly_end, multiplier);
+
+	ret = array_append_bulk(assembly_str, tmp, strlen(tmp));
+	free(tmp);
+	tmp = NULL;
 	if (ret != 0) {
 		warn("could not append");
+		return -1;
 	}
 
 	const char *pointer_functions = NULL;
