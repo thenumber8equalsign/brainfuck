@@ -90,7 +90,7 @@ void instruction_to_assembly(const struct brainfuck_instruction *instruction,
 	case 8:
 		word = "qword";
 		multiplier = "*8";
-		modulo = 1; // qwords will always be modulo 2^64
+		modulo = 0; // qwords will always be modulo 2^64
 		extra_write = "\tlea\trdi, qword ptr [rdi*8]\n";
 		extra_read = "\tmov\tqword ptr [rbx+r12*8], 0\n"
 			     "\tlea\trdi, qword ptr [rdi*8]\n";
@@ -101,21 +101,22 @@ void instruction_to_assembly(const struct brainfuck_instruction *instruction,
 
 	const _Bool undefined_overflow = options->overflow == POINTER_UNDEFINED;
 
+	uint64_t rep = (modulo == 0) ? instruction->repetitions :
+				       instruction->repetitions % modulo;
+
 	// rbx is containing the address of the array
 	// r12 is containing the pointer
 
 	if (instruction->instruction == '+') {
 		// this works due to distributive property of modulo
 		const char *format = "\tadd	%s ptr [rbx+r12%s], %zu\n";
-		sprintf(str, format, word, multiplier,
-			instruction->repetitions % modulo);
+		sprintf(str, format, word, multiplier, rep);
 		return;
 	}
 
 	if (instruction->instruction == '-') {
 		const char *format = "\tsub	%s ptr [rbx+r12%s], %zu\n";
-		sprintf(str, format, word, multiplier,
-			instruction->repetitions % modulo);
+		sprintf(str, format, word, multiplier, rep);
 		return;
 	}
 
