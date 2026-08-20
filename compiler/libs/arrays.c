@@ -104,8 +104,10 @@ int array_append_bulk(struct __array *arr, const char *src, size_t len)
  */
 int array_pop_single(struct __array *arr)
 {
-	if (arr->length >= 1)
+	if (arr->length >= 1) {
 		--arr->length;
+		arr->data[arr->length] = 0;
+	}
 
 	return 0;
 }
@@ -115,8 +117,10 @@ int array_pop_single(struct __array *arr)
  */
 int array_pop_many(struct __array *arr, size_t num)
 {
-	if (arr->length >= num)
+	if (arr->length >= num) {
 		arr->length -= num;
+		arr->data[arr->length] = 0;
+	}
 
 	return 0;
 }
