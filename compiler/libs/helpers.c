@@ -21,9 +21,10 @@ void print_help(bool use_stderr, const char *argv0)
 {
 	FILE *stream = (use_stderr) ? stderr : stdout;
 
+	// I stopped thinking how to name the options when i added -a
 	fprintf(stream,
 		"Usage: %s [-S] [-o output] [-O] [-h] [-B behavior]"
-		" [-c width] "
+		" [-c width] [-a]"
 		"brainfuck_file\n\n",
 		argv0);
 
@@ -55,6 +56,13 @@ void print_help(bool use_stderr, const char *argv0)
 	fprintf(stream, "\t-c width\n\t\t"
 			"set the cell width (in bytes), default is 1."
 			" This should be one of 1, 2, 4, or 8\n");
+	fprintf(stream,
+		"\t-a\n\t\t"
+		"disable use of comments (note they are"
+		" enabled by default)\n\t\t"
+		"when a '#' is encountered, all characters, instructions or not"
+		" are ignored, until a '\\n' is encountered\n"
+	);
 
 	fprintf(stream, "\t-h\n\t\tprint this help\n");
 
@@ -69,7 +77,9 @@ int parse_options(int argc, char **argv, uint64_t *option_flags,
 	char *pointer_behavior = "wrap";
 	char *width_str = "1";
 	char *endptr = NULL;
-	while ((opt = getopt(argc, argv, "So:hOB:c:")) != -1) {
+	options->comments = true;
+
+	while ((opt = getopt(argc, argv, "So:hOB:c:a")) != -1) {
 		switch (opt) {
 		case 'S':
 			*option_flags |= FL_OUTPUT_ASSEMBLY;
@@ -88,6 +98,9 @@ int parse_options(int argc, char **argv, uint64_t *option_flags,
 			break;
 		case 'c':
 			width_str = optarg;
+			break;
+		case 'a':
+			options->comments = false;
 			break;
 		case '?':
 		default:

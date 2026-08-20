@@ -3,6 +3,7 @@
 # on my t480
 # it takes a whole minute in 32 bit mode with optimization and abort overflow
 # 5 minutes in 64 bit mode with optimization and abort overflow
+# 3 minutes in 64 bit mode with optimization and undefined overflow
 
 # Calculate 256
 ++++++++[>++++++++<-] # put 64 in cell 1 0 in cell 0

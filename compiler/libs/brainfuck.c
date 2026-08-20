@@ -451,6 +451,7 @@ int compile_brainfuck(struct __array *assembly_str, const int fd,
 	}
 
 	// parse brainfuck
+	_Bool is_comment = false;
 	for (size_t loop_counter = 0, i = 0;;) {
 		char instruction;
 		ssize_t r = read(fd, &instruction, 1);
@@ -460,7 +461,13 @@ int compile_brainfuck(struct __array *assembly_str, const int fd,
 			err(EXIT_FAILURE, "read");
 		}
 
-		if (!is_bf_instruction(instruction))
+		if (instruction == '#' && options->comments)
+			is_comment = true;
+		else if (instruction == '\n' && options->comments)
+			is_comment = false;
+
+
+		if (!is_bf_instruction(instruction) || is_comment)
 			continue;
 
 		struct brainfuck_instruction instr;
