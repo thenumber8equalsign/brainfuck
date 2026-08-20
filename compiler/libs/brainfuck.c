@@ -24,28 +24,29 @@
  * @loop_index: the index of the loop (only useful if instruction is '[' or ']')
  * @corrosponding_open: if instruction is ']', then the pointer to the
  * 	corrosponding open loop instruction
- * @tmp0: see Extra Instructions
- * @tmp1: see Extra Instructions
+ * @assembly: the optimizer may generate assembly, if it does it will generate
+ * 	it and put it in this array, otherwise this __array is memseted to 0
+ * 	if it is set, instruction_to_assembly will use this
+ * 	unless repetitions is 0
+ * 	this is defined as "being set" if the data attribute of __array
+ * 	is not NULL
+ * 	This is a string
  *
  * Extra Instructions (for compiler use only, not in the brainfuck code)
  * 	'z': zero current cell
- * 	's': square current cell, set current_ptr+tmp0 to 0, and
- *	 	set current_ptr+tmp1 to 0
- * 		note tmp0 and tmp1 are expressed as relative to the current cell
  */
 struct brainfuck_instruction {
 	char instruction;
 	size_t repetitions;
 	size_t loop_index;
 	const struct brainfuck_instruction *corrosponding_open;
-	ssize_t tmp0;
-	ssize_t tmp1;
+	struct __array assembly;
 };
 
 /**
  * instruction_to_assembly() - convert a brainfuck_instruction to assembly
  * @instruction: the struct brainfuck_instruction to convert
- * @str: the string to output to, should be around 100 in size
+ * @str: the string to output to, should be around 1000 in size
  * @options: compiler options, see definition for documentation
  *
  * if instruction->repetitions is 0, nothing happens
@@ -59,6 +60,11 @@ void instruction_to_assembly(const struct brainfuck_instruction *instruction,
 {
 	if (instruction->repetitions == 0)
 		return;
+
+	if (instruction->assembly.data != NULL) {
+		strcpy(str, instruction->assembly.data);
+		return;
+	}
 
 	const char *word = "byte";
 	const char *multiplier = "";
@@ -471,6 +477,7 @@ int compile_brainfuck(struct __array *assembly_str, const int fd,
 			continue;
 
 		struct brainfuck_instruction instr;
+		memset(&instr, 0, sizeof(instr));
 
 		instr.repetitions = 1;
 		instr.instruction = instruction;
@@ -525,7 +532,7 @@ int compile_brainfuck(struct __array *assembly_str, const int fd,
 		if (instr_data[i].repetitions == 0)
 			continue;
 
-		char buf[256];
+		char buf[1024];
 		instruction_to_assembly(&instr_data[i], buf, options);
 
 		ret = array_append_bulk(assembly_str, buf, strlen(buf));
