@@ -15,6 +15,11 @@
 
 # square again now it is 2 ** 32
 # note this takes a very very long time
+
+# current cell = current cell ** 2
+# next cell = 0
+# next next cell = 0
+# pointer increment
 >[-]>[-]<<
 [>+<-]
 >[-[>+<<++>-]<+>>[<+>-]<]<

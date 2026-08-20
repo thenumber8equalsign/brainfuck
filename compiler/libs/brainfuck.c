@@ -24,15 +24,22 @@
  * @loop_index: the index of the loop (only useful if instruction is '[' or ']')
  * @corrosponding_open: if instruction is ']', then the pointer to the
  * 	corrosponding open loop instruction
+ * @tmp0: see Extra Instructions
+ * @tmp1: see Extra Instructions
  *
  * Extra Instructions (for compiler use only, not in the brainfuck code)
  * 	'z': zero current cell
+ * 	's': square current cell, set current_ptr+tmp0 to 0, and
+ *	 	set current_ptr+tmp1 to 0
+ * 		note tmp0 and tmp1 are expressed as relative to the current cell
  */
 struct brainfuck_instruction {
 	char instruction;
 	size_t repetitions;
 	size_t loop_index;
 	const struct brainfuck_instruction *corrosponding_open;
+	ssize_t tmp0;
+	ssize_t tmp1;
 };
 
 /**
@@ -262,6 +269,21 @@ static _Bool is_opposite_instruction(char a, char b)
 	       (a == '-' && b == '+') || (a == '>' && b == '<');
 }
 
+static void purge_instructions(size_t *len,
+			       struct brainfuck_instruction *instrs)
+{
+	for (size_t i = 0; i < *len; ++i) {
+		const _Bool val = instrs[i].repetitions == 0;
+
+		for (size_t j = i; j < *len - 1 && val; ++j) {
+			instrs[j] = instrs[j + 1];
+		}
+
+		if (val)
+			--(*len);
+	}
+}
+
 // returns the new length
 static size_t optimize_brainfuck(size_t len,
 				 struct brainfuck_instruction *instrs)
@@ -302,17 +324,7 @@ static size_t optimize_brainfuck(size_t len,
 		}
 	}
 
-	// now remove all the instructions with repitition 0
-	for (size_t i = 0; i < len; ++i) {
-		const _Bool val = instrs[i].repetitions == 0;
-
-		for (size_t j = i; j < len - 1 && val; ++j) {
-			instrs[j] = instrs[j + 1];
-		}
-
-		if (val)
-			--len;
-	}
+	purge_instructions(&len, instrs);
 
 	// optimize anything in the form [+], or [-] as they always
 	// set the current cell to 0
@@ -336,6 +348,23 @@ static size_t optimize_brainfuck(size_t len,
 			i += 2;
 		}
 	}
+
+	purge_instructions(&len, instrs);
+
+	// the square algorithm is a 34 instruction sequence
+	// >[-]>[-]<<[>+<-]>[-[>+<<++>-]<+>>[<+>-]<]<
+	// note: it is 34 as the [-] is 3, becomes 1 due to becoming zero
+	// the << and ++ and >> collapse into a single instruction
+	for (size_t i = 0; i < len - 33 && len > 33; ++i) {
+		// the first > is x->tmp0
+		// the second > is tmp0->tmp1
+		// from these two, we can then determine all the other offsets
+		// x->tmp1, etc.
+		// and optimize it if and only if the temporaries, and x do not
+		// occupy the same location
+	}
+
+	purge_instructions(&len, instrs);
 
 	return len;
 }
