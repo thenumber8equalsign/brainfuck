@@ -358,10 +358,12 @@ static size_t optimize_brainfuck(size_t len,
 	purge_instructions(&len, instrs);
 
 	// the square algorithm is a 34 instruction sequence
-	// >[-]>[-]<<[>+<-]>[-[>+<<++>-]<+>>[<+>-]<]<
-	// note: it is 34 as the [-] is 3, becomes 1 due to becoming zero
+	// >[-]>[-]<<[>+<-]>[-[>+<<++>-]<+>>[<+>-]<]
+	// note: it is 33 as the [-] is 3, becomes 1 due to becoming zero
 	// the << and ++ and >> collapse into a single instruction
-	for (size_t i = 0; i < len - 33 && len > 33; ++i) {
+	// square current cell, set tmp0 to 0, set tmp1 to 0
+	// and move the pointer to tmp0
+	for (size_t i = 0; i < len - 32 && len > 32; ++i) {
 		// the first > is x->tmp0
 		// the second > is tmp0->tmp1
 		// from these two, we can then determine all the other offsets
