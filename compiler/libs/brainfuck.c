@@ -469,10 +469,8 @@ int compile_brainfuck(struct __array *assembly_str, const int fd,
 			err(EXIT_FAILURE, "read");
 		}
 
-		if (instruction == '#' && options->comments)
-			is_comment = true;
-		else if (instruction == '\n' && options->comments)
-			is_comment = false;
+		if (options->comments && instruction == '#')
+			is_comment = !is_comment;
 
 
 		if (!is_bf_instruction(instruction) || is_comment)

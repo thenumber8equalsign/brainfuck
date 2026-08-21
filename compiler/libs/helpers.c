@@ -61,7 +61,7 @@ void print_help(bool use_stderr, const char *argv0)
 		"disable use of comments (note they are"
 		" enabled by default)\n\t\t"
 		"when a '#' is encountered, all characters, instructions or not"
-		" are ignored, until a '\\n' is encountered\n"
+		" are ignored, until another '#' is encountered\n"
 	);
 
 	fprintf(stream, "\t-h\n\t\tprint this help\n");

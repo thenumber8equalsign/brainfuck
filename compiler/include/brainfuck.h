@@ -37,8 +37,7 @@ enum pointer_behavior {
  * @overflow: behavior on what to do when the pointer overflows
  * @cell_width: cell width, in bytes, should be one of 1, 2, 4, or 8
  * 	bad stuff may happen if this is not one of those
- * @comments: if this is enabled, if a # is encountered, all characters until
- *	the next newline are ignored
+ * @comments: use comments
  */
 struct compiler_options {
 	_Bool optimize;
