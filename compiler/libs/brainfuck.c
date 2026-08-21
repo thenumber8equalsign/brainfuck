@@ -15,7 +15,7 @@
 #include <brainfuck.h>
 
 /**
- * struct brainfuck_instruction - a single, or repeated brainfuck instruction
+ * struct bf_instrucion - a single, or repeated brainfuck instruction
  * @instr: the character for the instruction, for extra instructions see below
  * @repetitions: the number of times the instruction is performed in a row
  * 	only useful if it is +, -, <, or >
@@ -35,11 +35,11 @@
  * Extra Instructions (for compiler use only, not in the brainfuck code)
  * 	'z': zero current cell
  */
-struct brainfuck_instruction {
+struct bf_instruction {
 	char instruction;
-	size_t repetitions;
+	ssize_t repetitions;
 	size_t loop_index;
-	const struct brainfuck_instruction *corrosponding_open;
+	const struct bf_instruction *corrosponding_open;
 	struct __array assembly;
 };
 
@@ -55,8 +55,9 @@ struct brainfuck_instruction {
  *
  * Return: none
  */
-void instruction_to_assembly(const struct brainfuck_instruction *instruction,
-			     char *str, const struct compiler_options *options)
+static void instruction_to_assembly(const struct bf_instruction *instruction,
+				    char *str,
+				    const struct compiler_options *options)
 {
 	if (instruction->repetitions == 0)
 		return;
@@ -114,7 +115,7 @@ void instruction_to_assembly(const struct brainfuck_instruction *instruction,
 
 	const _Bool undefined_overflow = options->overflow == POINTER_UNDEFINED;
 
-	uint64_t rep = (modulo == 0) ? instruction->repetitions :
+	ssize_t rep = (modulo == 0) ? instruction->repetitions :
 				       instruction->repetitions % modulo;
 
 	// rbx is containing the address of the array
@@ -122,13 +123,13 @@ void instruction_to_assembly(const struct brainfuck_instruction *instruction,
 
 	if (instruction->instruction == '+') {
 		// this works due to distributive property of modulo
-		const char *format = "\tadd	%s ptr [rbx+r12%s], %zu\n";
+		const char *format = "\tadd	%s ptr [rbx+r12%s], %zd\n";
 		sprintf(str, format, word, multiplier, rep);
 		return;
 	}
 
 	if (instruction->instruction == '-') {
-		const char *format = "\tsub	%s ptr [rbx+r12%s], %zu\n";
+		const char *format = "\tsub	%s ptr [rbx+r12%s], %zd\n";
 		sprintf(str, format, word, multiplier, rep);
 		return;
 	}
@@ -218,8 +219,8 @@ void instruction_to_assembly(const struct brainfuck_instruction *instruction,
  *
  * Return: the pointer to the corrosponding open brace, or NULL
  */
-static const struct brainfuck_instruction *
-find_open_brace(const struct brainfuck_instruction *instrs, size_t index)
+static const struct bf_instruction *
+find_open_brace(const struct bf_instruction *instrs, size_t index)
 {
 	--index;
 	size_t num_loops = 0;
@@ -275,8 +276,7 @@ static _Bool is_opposite_instruction(char a, char b)
 	       (a == '-' && b == '+') || (a == '>' && b == '<');
 }
 
-static void purge_instructions(size_t *len,
-			       struct brainfuck_instruction *instrs)
+static void purge_instructions(size_t *len, struct bf_instruction *instrs)
 {
 	for (size_t i = 0; i < *len; ++i) {
 		const _Bool val = instrs[i].repetitions == 0;
@@ -290,9 +290,141 @@ static void purge_instructions(size_t *len,
 	}
 }
 
+// > and + is positive
+// < and - is negative
+// returns 0 if it instruction type was valid
+// otherwise returns -1
+static int get_signed_repetitions(const struct bf_instruction *instr,
+				  ssize_t *result)
+{
+	const char in = instr->instruction;
+
+	if (in == '<' || in == '-') {
+		*result = -instr->repetitions;
+		return 0;
+	} else if (in == '>' || in == '+') {
+		*result = instr->repetitions;
+		return 0;
+	}
+
+	return -1;
+}
+
+static void create_square_algorithm(struct bf_instruction alg[33],
+				    ssize_t tmp0, ssize_t tmp1)
+{
+	// all pointer moves were traded for '>'
+	const char *algs = ">z>z>[>+>-]>[-[>+>+>-]>+>[>+>-]>]";
+	// als[8] repetition is 2
+	// move order, index:
+	// x->tmp0 0
+	// tmp0->tmp1 2
+	// tmp1->x 4
+	// x->tmp0 6
+	// tmp0->x 8
+	// x->tmp0 11
+	// tmp0->tmp1 15
+	// tmp1->x 17
+	// x->tmp0 19
+	// tmp0->x 22
+	// x->tmp1 24
+	// tmp1->tmp0 26
+	// tmp0->tmp1 28
+	// tmp1->tmp0 31
+
+	for (size_t i = 0; i < 33; ++i) {
+		alg[i].instruction = algs[i];
+	}
+	alg[8].repetitions = 2;
+	assert(alg[8].instruction == '+' && algs[8] == '+');
+
+	alg[0].repetitions = tmp0;
+	alg[2].repetitions = tmp1 - tmp0;
+	alg[4].repetitions = -tmp1;
+	alg[6].repetitions = tmp0;
+	alg[8].repetitions = -tmp0;
+	alg[11].repetitions = tmp0;
+	alg[15].repetitions = tmp1 - tmp0;
+	alg[17].repetitions = -tmp1;
+	alg[19].repetitions = tmp0;
+	alg[22].repetitions = -tmp0;
+	alg[24].repetitions = tmp1;
+	alg[26].repetitions = tmp0 - tmp1;
+	alg[28].repetitions = tmp1 - tmp0;
+	alg[31].repetitions = tmp0 - tmp1;
+
+	for (size_t i = 0; i < 33; ++i) {
+		if (alg[i].instruction == '>' && alg[i].repetitions < 0) {
+			alg[i].instruction = '<';
+			alg[i].repetitions = -alg[i].repetitions;
+			continue;
+		}
+		if (alg[i].instruction == '<' && alg[i].repetitions < 0) {
+			alg[i].instruction = '>';
+			alg[i].repetitions = -alg[i].repetitions;
+			continue;
+		}
+	}
+}
+
+// return true if it was optimized, false otherwise
+// we can assume instrs[i+32] is valid
+static _Bool optimize_square_alg(size_t i, struct bf_instruction *instrs,
+				 _Bool undef_overflow)
+{
+	// ensure we are not messing with already generated assembly
+	for (size_t j = i; j < i + 33; ++j) {
+		if (instrs[j].assembly.data != NULL) {
+			return false;
+		}
+	}
+
+	// the square algorithm is a 33 instruction sequence
+	// >[-]>[-]<<[>+<-]>[-[>+<<++>-]<+>>[<+>-]<]
+	// note: it is 33 as the [-] is 3, becomes 1 due to becoming zero
+	// the << and ++ and >> collapse into a single instruction
+	// square current cell, set tmp0 to 0, set tmp1 to 0
+	// and move the pointer to tmp0
+
+	// the first > is x->tmp0
+	// the second > is tmp0->tmp1
+	// from these two, we can then determine all the other offsets
+	// x->tmp1, etc.
+	// and optimize it if and only if the temporaries, and x do not
+	// occupy the same location
+
+	ssize_t tmp0 = 0; // x to tmp0 offset
+	ssize_t tmp1 = 0; // x to tmp1 offset
+
+	// GET tmp0 AND tmp1 OFFSETS here
+	// and ensure that the first 4 instructions >z>z match,
+	// otherwise we literally can't get tmp0 or tmp1, because there is no
+	// > or <
+
+	if (tmp0 == 0 || tmp1 == 0 || tmp0 == tmp1) {
+		return false;
+	}
+
+	// used to compare the current instruction (+32 more) with the square
+	// algorithm
+	struct bf_instruction alg[33];
+	memset(alg, 0, sizeof(alg));
+	create_square_algorithm(alg, tmp0, tmp1);
+
+	// now, alg should be exactly what the square algorithm should be
+	// so compare it to the next instructions
+
+	// if it passes
+	// generate assembly for instrs[i], and
+
+
+	return true;
+}
+
 // returns the new length
-static size_t optimize_brainfuck(size_t len,
-				 struct brainfuck_instruction *instrs)
+// the new length will never be greater than the old length
+static size_t optimize_brainfuck(size_t len, struct bf_instruction *instrs,
+				 const struct compiler_options *opts)
 {
 	// optimize repeated +, -, <, and >
 	for (size_t i = 1; i < len; ++i) {
@@ -313,8 +445,8 @@ static size_t optimize_brainfuck(size_t len,
 		if (!is_opposite_instruction(prev, cur))
 			continue;
 
-		size_t *cur_rep = &instrs[i].repetitions;
-		size_t *prev_rep = &instrs[i - 1].repetitions;
+		ssize_t *cur_rep = &instrs[i].repetitions;
+		ssize_t *prev_rep = &instrs[i - 1].repetitions;
 
 		if (*prev_rep > *cur_rep) {
 			*prev_rep -= *cur_rep;
@@ -335,9 +467,9 @@ static size_t optimize_brainfuck(size_t len,
 	// optimize anything in the form [+], or [-] as they always
 	// set the current cell to 0
 	for (size_t i = 0; i < len - 2 && len > 2; ++i) {
-		struct brainfuck_instruction *cur = &instrs[i];
-		struct brainfuck_instruction *next = &instrs[i + 1];
-		struct brainfuck_instruction *next_next = &instrs[i + 2];
+		struct bf_instruction *cur = &instrs[i];
+		struct bf_instruction *next = &instrs[i + 1];
+		struct bf_instruction *next_next = &instrs[i + 2];
 
 		// I really don't want to hit that 80 character bar in the if
 		_Bool replace = false;
@@ -357,19 +489,9 @@ static size_t optimize_brainfuck(size_t len,
 
 	purge_instructions(&len, instrs);
 
-	// the square algorithm is a 34 instruction sequence
-	// >[-]>[-]<<[>+<-]>[-[>+<<++>-]<+>>[<+>-]<]
-	// note: it is 33 as the [-] is 3, becomes 1 due to becoming zero
-	// the << and ++ and >> collapse into a single instruction
-	// square current cell, set tmp0 to 0, set tmp1 to 0
-	// and move the pointer to tmp0
 	for (size_t i = 0; i < len - 32 && len > 32; ++i) {
-		// the first > is x->tmp0
-		// the second > is tmp0->tmp1
-		// from these two, we can then determine all the other offsets
-		// x->tmp1, etc.
-		// and optimize it if and only if the temporaries, and x do not
-		// occupy the same location
+		optimize_square_alg(i, instrs,
+				    opts->overflow == POINTER_UNDEFINED);
 	}
 
 	purge_instructions(&len, instrs);
@@ -398,7 +520,7 @@ int compile_brainfuck(struct __array *assembly_str, const int fd,
 
 	int ret;
 	struct __array instructions;
-	struct brainfuck_instruction *instr_data;
+	struct bf_instruction *instr_data;
 	size_t instr_len;
 	char *tmp = NULL;
 	size_t tmp_len = strlen(assembly_begin) + 50;
@@ -426,7 +548,7 @@ int compile_brainfuck(struct __array *assembly_str, const int fd,
 	}
 
 	ret = array_reserve(&instructions,
-			    sizeof(struct brainfuck_instruction) * 1000);
+			    sizeof(struct bf_instruction) * 1000);
 	if (ret != 0) {
 		warn("could not reserve");
 		array_free(&instructions);
@@ -474,11 +596,10 @@ int compile_brainfuck(struct __array *assembly_str, const int fd,
 		else if (instruction == '\n' && options->comments)
 			is_comment = false;
 
-
 		if (!is_bf_instruction(instruction) || is_comment)
 			continue;
 
-		struct brainfuck_instruction instr;
+		struct bf_instruction instr;
 		memset(&instr, 0, sizeof(instr));
 
 		instr.repetitions = 1;
@@ -486,6 +607,7 @@ int compile_brainfuck(struct __array *assembly_str, const int fd,
 
 		instr.corrosponding_open = NULL;
 		instr.loop_index = -1;
+		instr.assembly.data = NULL;
 
 		if (instruction == '[') {
 			instr.loop_index = loop_counter;
@@ -494,8 +616,7 @@ int compile_brainfuck(struct __array *assembly_str, const int fd,
 
 		if (instruction == ']') {
 			instr.corrosponding_open = find_open_brace(
-				(const struct brainfuck_instruction *)
-					instructions.data,
+				(const struct bf_instruction *)instructions.data,
 				i);
 
 			if (instr.corrosponding_open == NULL) {
@@ -520,12 +641,12 @@ int compile_brainfuck(struct __array *assembly_str, const int fd,
 	}
 
 	// apply optimizations
-	instr_data = (struct brainfuck_instruction *)instructions.data;
-	instr_len = instructions.length / sizeof(struct brainfuck_instruction);
+	instr_data = (struct bf_instruction *)instructions.data;
+	instr_len = instructions.length / sizeof(struct bf_instruction);
 	if (options->optimize) {
-		size_t new_len = optimize_brainfuck(instr_len, instr_data);
-		instructions.length =
-			new_len * sizeof(struct brainfuck_instruction);
+		size_t new_len =
+			optimize_brainfuck(instr_len, instr_data, options);
+		instructions.length = new_len * sizeof(struct bf_instruction);
 		instr_len = new_len;
 	}
 
@@ -543,6 +664,10 @@ int compile_brainfuck(struct __array *assembly_str, const int fd,
 			array_free(&instructions);
 			return -1;
 		}
+	}
+
+	for (size_t i = 0; i < instr_len; ++i) {
+		array_free(&instr_data[i].assembly);
 	}
 
 	array_free(&instructions);
