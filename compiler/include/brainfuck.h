@@ -32,19 +32,33 @@ enum pointer_behavior {
 };
 
 /**
+ * enum comment_behavior - how to handle comments
+ * @END_ON_HASH: comments begin with # and and with #, allowing for multi-line
+ * 	comments, but no single line comment
+ * @END_ON_LF: comments begin with # and the rest of the line is ignored
+ * @MULTI_LINE_DOUBLE_HASH: same as END_ON_LF, however ## can be used for
+ * 	multi-line comments, ## is used to start and end a multi-line comment
+ * @NO_COMMENTS: disable comments
+ */
+enum comment_behavior {
+	COMMENT_LF,
+	COMMENT_DOUBLE_HASH,
+	NO_COMMENTS,
+};
+
+/**
  * struct compiler_options - options for the brainfuck compiler
  * @optimize: apply simple optimizations, like compressing -+, and ><
  * @overflow: behavior on what to do when the pointer overflows
  * @cell_width: cell width, in bytes, should be one of 1, 2, 4, or 8
  * 	bad stuff may happen if this is not one of those
- * @comments: if this is enabled, if a # is encountered, all characters until
- *	the next newline are ignored
+ * @comments: see above
  */
 struct compiler_options {
 	_Bool optimize;
 	size_t cell_width;
 	enum pointer_behavior overflow;
-	_Bool comments;
+	enum comment_behavior comments;
 };
 
 /**

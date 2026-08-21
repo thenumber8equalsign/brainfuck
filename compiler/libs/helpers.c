@@ -24,7 +24,7 @@ void print_help(bool use_stderr, const char *argv0)
 	// I stopped thinking how to name the options when i added -a
 	fprintf(stream,
 		"Usage: %s [-S] [-o output] [-O] [-h] [-B behavior]"
-		" [-c width] [-a]"
+		" [-c width] [-a comment_style]"
 		"brainfuck_file\n\n",
 		argv0);
 
@@ -57,11 +57,15 @@ void print_help(bool use_stderr, const char *argv0)
 			"set the cell width (in bytes), default is 1."
 			" This should be one of 1, 2, 4, or 8\n");
 	fprintf(stream,
-		"\t-a\n\t\t"
-		"disable use of comments (note they are"
-		" enabled by default)\n\t\t"
-		"when a '#' is encountered, all characters, instructions or not"
-		" are ignored, until a '\\n' is encountered\n"
+		"\t-a comment_style\n\t\t"
+		"comment behavior\n"
+		"\t\tcomment_style:\n\t\t\t"
+		"\"none\": disable comments entirely\n\t\t\t"
+		"\"line\": comments begin with # and the entire rest of the "
+		"line is ignored\n\t\t\t"
+		"\"double\": same as \"line\", but with the added ## "
+		"which will comment out all code until the next ## "
+		"which allows for multi-line comments (default)\n"
 	);
 
 	fprintf(stream, "\t-h\n\t\tprint this help\n");
@@ -77,9 +81,9 @@ int parse_options(int argc, char **argv, uint64_t *option_flags,
 	char *pointer_behavior = "wrap";
 	char *width_str = "1";
 	char *endptr = NULL;
-	options->comments = true;
+	char *comm = "double";
 
-	while ((opt = getopt(argc, argv, "So:hOB:c:a")) != -1) {
+	while ((opt = getopt(argc, argv, "So:hOB:c:a:")) != -1) {
 		switch (opt) {
 		case 'S':
 			*option_flags |= FL_OUTPUT_ASSEMBLY;
@@ -100,7 +104,7 @@ int parse_options(int argc, char **argv, uint64_t *option_flags,
 			width_str = optarg;
 			break;
 		case 'a':
-			options->comments = false;
+			comm = optarg;
 			break;
 		case '?':
 		default:
@@ -139,6 +143,17 @@ int parse_options(int argc, char **argv, uint64_t *option_flags,
 		options->overflow = POINTER_ABORT;
 	} else if (strcmp(pointer_behavior, "undefined") == 0) {
 		options->overflow = POINTER_UNDEFINED;
+	} else {
+		print_help(true, argv[0]);
+		exit(EXIT_FAILURE);
+	}
+
+	if (strcmp(comm, "double") == 0) {
+		options->comments = COMMENT_DOUBLE_HASH;
+	} else if (strcmp(comm, "line") == 0) {
+		options->comments = COMMENT_LF;
+	} else if (strcmp(comm, "none") == 0) {
+		options->comments = NO_COMMENTS;
 	} else {
 		print_help(true, argv[0]);
 		exit(EXIT_FAILURE);

@@ -116,7 +116,7 @@ static void instruction_to_assembly(const struct bf_instruction *instruction,
 	const _Bool undefined_overflow = options->overflow == POINTER_UNDEFINED;
 
 	ssize_t rep = (modulo == 0) ? instruction->repetitions :
-				       instruction->repetitions % modulo;
+				      instruction->repetitions % modulo;
 
 	// rbx is containing the address of the array
 	// r12 is containing the pointer
@@ -310,8 +310,8 @@ static int get_signed_repetitions(const struct bf_instruction *instr,
 	return -1;
 }
 
-static void create_square_algorithm(struct bf_instruction alg[33],
-				    ssize_t tmp0, ssize_t tmp1)
+static void create_square_algorithm(struct bf_instruction alg[33], ssize_t tmp0,
+				    ssize_t tmp1)
 {
 	// all pointer moves were traded for '>'
 	const char *algs = ">z>z>[>+>-]>[-[>+>+>-]>+>[>+>-]>]";
@@ -417,7 +417,6 @@ static _Bool optimize_square_alg(size_t i, struct bf_instruction *instrs,
 	// if it passes
 	// generate assembly for instrs[i], and
 
-
 	return true;
 }
 
@@ -497,6 +496,33 @@ static size_t optimize_brainfuck(size_t len, struct bf_instruction *instrs,
 	purge_instructions(&len, instrs);
 
 	return len;
+}
+
+static void check_comments(char instr, char next_instr, _Bool *is_comm,
+			   _Bool *is_multi, enum comment_behavior behav)
+{
+	if (behav == NO_COMMENTS) {
+		*is_comm = false;
+		*is_multi = false;
+		return;
+	}
+
+	if (behav == COMMENT_DOUBLE_HASH && instr == '#' && next_instr == '#') {
+		*is_multi = !(*is_multi);
+	}
+
+	if (behav == COMMENT_DOUBLE_HASH && instr == '#' && next_instr != '#') {
+		*is_comm = true;
+	}
+
+	if (instr == '\n') {
+		*is_comm = false;
+	}
+
+	if (behav == COMMENT_LF && instr == '#') {
+		*is_comm = true;
+	}
+
 }
 
 /**
@@ -582,22 +608,43 @@ int compile_brainfuck(struct __array *assembly_str, const int fd,
 
 	// parse brainfuck
 	_Bool is_comment = false;
+	_Bool is_multi_comment = false;
 	for (size_t loop_counter = 0, i = 0;;) {
 		char instruction;
+		char next_instruction = 0;
 		ssize_t r = read(fd, &instruction, 1);
 		if (r == 0) {
 			break;
 		} else if (r == -1) {
-			err(EXIT_FAILURE, "read");
+			warn("read");
+			array_free(&instructions);
+			return -1;
 		}
 
-		if (instruction == '#' && options->comments)
-			is_comment = true;
-		else if (instruction == '\n' && options->comments)
-			is_comment = false;
+		off_t off = lseek(fd, 0, SEEK_CUR);
+		if (off == -1) {
+			warn("lseek");
+			array_free(&instructions);
+			return -1;
+		}
 
-		if (!is_bf_instruction(instruction) || is_comment)
+		r = pread(fd, &next_instruction, 1, off);
+		if (r == 0) {
+			next_instruction = 0;
+		} else if (r == -1) {
+			warn("pread");
+			array_free(&instructions);
+			return -1;
+		}
+
+		check_comments(instruction, next_instruction, &is_comment,
+			       &is_multi_comment, options->comments);
+
+		const _Bool eighty = !is_bf_instruction(instruction) ||
+				     is_comment || is_multi_comment;
+		if (eighty) {
 			continue;
+		}
 
 		struct bf_instruction instr;
 		memset(&instr, 0, sizeof(instr));
