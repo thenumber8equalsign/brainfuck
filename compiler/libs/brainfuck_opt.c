@@ -313,7 +313,7 @@ static void opt_square_alg_helper(size_t i, struct bf_instruction *instrs,
 
 
 	instrs[i + 3].repetitions = 1;
-	// square assembly (TODO) and put it in instrs[i + 1].assembly
+	// square assembly (TODO) and put it in instrs[i + 3].assembly
 
 	instrs[i + 4].instruction = '>';
 	instrs[i + 5].repetitions = tmp0;
