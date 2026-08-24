@@ -19,8 +19,6 @@
  * This function will attempt to write the contents of @str into the file
  * @pathname
  *
- * Context: will not sleep
- *
  * Return: 0 on success, -1 on error
  */
 int output_to_file(const char *str, const char *pathname)

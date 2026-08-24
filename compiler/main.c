@@ -26,10 +26,6 @@ int main(int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
-	// ensure the user can't break our getopt, which uses the gnu extension
-	// of moving the non-option arguments to the end
-	unsetenv("POSIXLY_CORRECT");
-
 	char output_pathname[PATH_MAX] = "./a.out";
 	char brainfuck_pathname[PATH_MAX];
 	int ret;

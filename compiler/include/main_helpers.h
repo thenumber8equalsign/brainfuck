@@ -1,5 +1,5 @@
-#ifndef __MAIN_HELPERS_H__
-#define __MAIN_HELPERS_H__
+#ifndef MAIN_HELPERS_H
+#define MAIN_HELPERS_H
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -33,7 +33,7 @@ void print_help(bool use_stderr, const char *argv0);
  * @output_pathname: this will be set to the pathname for the output file,
  * 	or ./a.out which is the default
  *
- * Context: this may use exit() on failure
+ * Context: this may cause the program to exit if an error occurs
  *
  * Return: 0 for success, -1 for error
  */

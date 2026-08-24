@@ -62,19 +62,83 @@ struct compiler_options {
 };
 
 /**
+ * struct bf_instrucion - a single, or repeated brainfuck instruction
+ * @instr: the character for the instruction, for extra instructions see below
+ * @repetitions: the number of times the instruction is performed in a row
+ * 	only useful if it is +, -, <, or >
+ * 	a value of 0 will effectively remove the instruction
+ * 	for all instructions
+ * @loop_index: the index of the loop (only useful if instruction is '[' or ']')
+ * @corrosponding_open: if instruction is ']', then the pointer to the
+ * 	corrosponding open loop instruction
+ * @assembly: the optimizer may generate assembly, if it does it will generate
+ * 	it and put it in this array, otherwise this __array is memseted to 0
+ * 	if it is set, instruction_to_assembly will use this
+ * 	unless repetitions is 0
+ * 	this is defined as "being set" if the data attribute of __array
+ * 	is not NULL
+ * 	This is a string
+ *
+ * Extra Instructions (for compiler use only, not in the brainfuck code)
+ * 	'z': zero current cell
+ */
+struct bf_instruction {
+	char instruction;
+	ssize_t repetitions;
+	size_t loop_index;
+	const struct bf_instruction *corrosponding_open;
+	struct __array assembly;
+};
+
+/**
  * compile_brainfuck() - given a file descriptor, convert bf into assembly
  * @assembly_str: the string for the assembly to go to
  * 	it is assumed that this is empty with length = 0
  * @fd: the file descriptor to the brainfuck code
  * @options: brainfuck options, see definition for documentation
  *
- * Context: might take a long time, but it shouldn't sleep, it also might
- * 	exit the program because of err()
- *
  * Return: 0 on success, -1 on error
  */
 int compile_brainfuck(struct __array *assembly_str, const int fd,
-		       const struct compiler_options *options);
+		      const struct compiler_options *options);
+
+/*
+ * get_word_and_multiplier() - get the word specifier, and size multiplier
+ * 	based on compiler options
+ * @word: this will be set to point to a string literal, either "QWORD", "BYTE",
+ * 	"WORD", or "DWORD" depending on options
+ * @multiplier: this will be set to point to a string literal, either "",
+ * 	"*2", "*4", or "*8"
+ * @options: the compiler options
+ *
+ * Return: 0 indicates success, -1 indicates error
+ */
+static inline int
+get_word_and_multiplier(const char **word, const char **multiplier,
+			const struct compiler_options *options)
+{
+	switch (options->cell_width) {
+	case 1:
+		*word = "BYTE";
+		*multiplier = "";
+		break;
+	case 2:
+		*word = "WORD";
+		*multiplier = "*2";
+		break;
+	case 4:
+		*word = "DWORD";
+		*multiplier = "*4";
+		break;
+	case 8:
+		*word = "QWORD";
+		*multiplier = "*8";
+		break;
+	default:
+		return -1;
+	}
+	return 0;
+}
 
 // clang-format off
 // This is the assembly "boilerplate", generated code from

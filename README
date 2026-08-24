@@ -1,9 +1,5 @@
 an optimizing brainfuck compiler for Linux AMD64, (and cross-platform interpreter)
 
-Note: right now the interpreter (should) runs on any POSIX complient system.
-However, in the future it will only run on any POSIX complient system such that
-getopt() moves non-option arguments to the end of argv
-
 there is a compiler located at compiler/
 and there is an interpreter located at interpreter/
 

@@ -1,5 +1,5 @@
-#ifndef __COMPILER_H__
-#define __COMPILER_H__
+#ifndef COMPILER_H
+#define COMPILER_H
 
 #include <stdbool.h>
 
@@ -14,8 +14,6 @@ extern "C" {
  *
  * This function will attempt to write the contents of @str into the file
  * @pathname
- *
- * Context: will not sleep
  *
  * Return: 0 on success, -1 if error
  */
