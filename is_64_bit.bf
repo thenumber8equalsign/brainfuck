@@ -10,9 +10,9 @@
 >[<++++>-]< # multiply cell 1 by 4 while moving it to cell 0
 
 # square now it is 2 ** 16
->[-]>[-]<<
-[>+<-]
->[-[>+<<++>-]<+>>[<+>-]<]<
+>>>[-]>[-]<<<<
+[>>>+<<<-]
+>>>[-[>+<<<<++>>> -]<<<+>>>>[<+>-]<]<<<
 
 # square again now it is 2 ** 32
 # note this takes a very very long time
@@ -21,13 +21,14 @@
 # next cell = 0
 # next next cell = 0
 # pointer increment
->[-]>[-]<<
-[>+<-]
->[-[>+<<++>-]<+>>[<+>-]<]<
+>>>[-]>[-]<<<<
+[>>>+<<<-]
+>>>[-[>+<<<<++>>> -]<<<+>>>>[<+>-]<]<<<
 
 >>>+<<<
 [
 	# 2 ** 32 is not 0 therefore we must be in a 64 bit environment
+	[-]>[-]<
 	++++++[>++++++++<-]
 	>[<+>-]<
 	++++++.--.

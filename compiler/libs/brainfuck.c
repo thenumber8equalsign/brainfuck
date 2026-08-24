@@ -260,6 +260,8 @@ static size_t optimize_brainfuck(size_t len, struct bf_instruction *instrs,
 	// but is_64_bit.bf hangs for seemingly forever on my t480
 	// (i don't have my desktop with me right now), i waited 3 minutes.
 	// Whenever i comment this out and set cell size to 8
+
+	// After fixing my broken brainfuck code, this is no longer needed
 	collapse_instructions(len, instrs, opts);
 	len = purge_instructions(len, instrs);
 	for (size_t i = 0; i < len; ++i) {

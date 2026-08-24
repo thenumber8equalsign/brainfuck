@@ -280,10 +280,13 @@ static void opt_square_alg_helper(size_t i, struct bf_instruction *instrs,
 		}
 
 		// alg is already containing signed repetitions
-		ssize_t rep_a = alg[alg_i].repetitions, rep_i = 0;
+		ssize_t rep_a = 0;// alg[alg_i].repetitions;
+		ssize_t rep_i = 0;
 		int b = get_signed_repetitions(&instrs[j], &rep_i);
+		int a = get_signed_repetitions(&alg[alg_i], &rep_a);
 
 		assert(b == 0); // sanity check
+		assert(a == 0);
 
 		if (rep_a != rep_i) {
 			is_square_algorithm = false;
@@ -324,12 +327,12 @@ static void opt_square_alg_helper(size_t i, struct bf_instruction *instrs,
 	}
 	snprintf(buf, sizeof(buf), fmt, reg, word, multiplier);
 
-	if (array_init(&instrs[i + 3].assembly) == -1) {
+	if (array_init(&instrs[i + 4].assembly) == -1) {
 		warn("array_init");
 		return;
 	}
 
-	int ret = array_append_bulk(&instrs[i + 3].assembly, buf, strlen(buf));
+	int ret = array_append_bulk(&instrs[i + 4].assembly, buf, strlen(buf));
 	if (ret == -1) {
 		warn("array_append_bulk");
 		array_free(&instrs[i + 3].assembly);
@@ -341,13 +344,15 @@ static void opt_square_alg_helper(size_t i, struct bf_instruction *instrs,
 	instrs[i].repetitions = 1;
 	instrs[i + 1].instruction = '>';
 	instrs[i + 1].repetitions = tmp1 - tmp0;
-	instrs[i + 2].instruction = '>';
-	instrs[i + 2].repetitions = -tmp1;
+	instrs[i + 2].instruction = 'z';
+	instrs[i + 2].repetitions = 1;
+	instrs[i + 3].instruction = '>';
+	instrs[i + 3].repetitions = -tmp1;
 
-	instrs[i + 3].repetitions = 1;
+	instrs[i + 4].repetitions = 1;
 
-	instrs[i + 4].instruction = '>';
-	instrs[i + 4].repetitions = tmp0;
+	instrs[i + 5].instruction = '>';
+	instrs[i + 5].repetitions = tmp0;
 
 	for (size_t j = i; j < i + 32; ++j) {
 		if (instrs[j].instruction == '>' && instrs[j].repetitions < 0) {
@@ -362,7 +367,7 @@ static void opt_square_alg_helper(size_t i, struct bf_instruction *instrs,
 		}
 	}
 
-	for (size_t j = i + 5; j < i + 32; ++j) {
+	for (size_t j = i + 6; j < i + 32; ++j) {
 		instrs[j].repetitions = 0;
 		instrs[j].instruction = 0;
 	}
