@@ -54,6 +54,8 @@ void optimize_zero_cell(size_t len, struct bf_instruction instrs[static len],
  * @instrs: the bf_instruction array representing the program
  * @opts: compiler options
  *
+ * Note: a call to collapse_instructions may be necessary after calling this
+ *
  * Return: None
  */
 void optimize_square_algorithm(size_t len,

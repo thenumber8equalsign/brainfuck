@@ -302,7 +302,40 @@ static void opt_square_alg_helper(size_t i, struct bf_instruction *instrs,
 	const char *multiplier;
 	get_word_and_multiplier(&word, &multiplier, opts);
 
-	return;
+	// generate assembly first (in case array stuff fails)
+	const char *fmt = "\tmov	%1$s, %2$s ptr [rbx+r12%3$s]\n"
+			  "\tmul	%2$s ptr [rbx+r12%3$s]\n"
+			  "\tmov	%2$s ptr [rbx+r12%3$s], %1$s\n";
+	const char *reg;
+	char buf[1024];
+	switch (opts->cell_width) {
+	case 1:
+		reg = "al";
+		break;
+	case 2:
+		reg = "ax";
+		break;
+	case 4:
+		reg = "eax";
+		break;
+	case 8:
+		reg = "rax";
+		break;
+	}
+	snprintf(buf, sizeof(buf), fmt, reg, word, multiplier);
+
+	if (array_init(&instrs[i + 3].assembly) == -1) {
+		warn("array_init");
+		return;
+	}
+
+	int ret = array_append_bulk(&instrs[i + 3].assembly, buf, strlen(buf));
+	if (ret == -1) {
+		warn("array_append_bulk");
+		array_free(&instrs[i + 3].assembly);
+		instrs[i + 3].assembly.data = NULL;
+		return;
+	}
 
 	instrs[i].instruction = 'z';
 	instrs[i].repetitions = 1;
@@ -311,12 +344,10 @@ static void opt_square_alg_helper(size_t i, struct bf_instruction *instrs,
 	instrs[i + 2].instruction = '>';
 	instrs[i + 2].repetitions = -tmp1;
 
-
 	instrs[i + 3].repetitions = 1;
-	// square assembly (TODO) and put it in instrs[i + 3].assembly
 
 	instrs[i + 4].instruction = '>';
-	instrs[i + 5].repetitions = tmp0;
+	instrs[i + 4].repetitions = tmp0;
 
 	for (size_t j = i; j < i + 32; ++j) {
 		if (instrs[j].instruction == '>' && instrs[j].repetitions < 0) {
@@ -331,8 +362,9 @@ static void opt_square_alg_helper(size_t i, struct bf_instruction *instrs,
 		}
 	}
 
-	for (size_t j = i + 6; j < i + 32; ++j) {
+	for (size_t j = i + 5; j < i + 32; ++j) {
 		instrs[j].repetitions = 0;
+		instrs[j].instruction = 0;
 	}
 }
 
