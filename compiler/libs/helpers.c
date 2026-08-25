@@ -24,7 +24,7 @@ void print_help(bool use_stderr, const char *argv0)
 	// I stopped thinking how to name the options when i added -a
 	fprintf(stream,
 		"Usage: %s [-S] [-o output] [-O] [-h] [-B behavior]"
-		" [-c width] [-a comment_style]"
+		" [-c width] [-a comment_style] [-d width] "
 		"brainfuck_file\n\n",
 		argv0);
 
@@ -96,12 +96,14 @@ int parse_options(int argc, char **argv, uint64_t *option_flags,
 		  char *output_pathname)
 {
 	int opt;
-	char *pointer_behavior = "wrap";
-	char *width_str = "1";
+	const char *pointer_behavior = "wrap";
+	const char *width_str = "1";
 	char *endptr = NULL;
-	char *comm = "double";
+	const char *comm = "double";
+	const char *wrap_width_str = NULL;
+	options->strip_brainfuck = false;
 
-	while ((opt = getopt(argc, argv, "So:hOB:c:a:")) != -1) {
+	while ((opt = getopt(argc, argv, "So:hOB:c:a:d:")) != -1) {
 		switch (opt) {
 		case 'S':
 			*option_flags |= FL_OUTPUT_ASSEMBLY;
@@ -123,6 +125,10 @@ int parse_options(int argc, char **argv, uint64_t *option_flags,
 			break;
 		case 'a':
 			comm = optarg;
+			break;
+		case 'd':
+			wrap_width_str = optarg;
+			options->strip_brainfuck = true;
 			break;
 		case '?':
 		default:
@@ -175,6 +181,14 @@ int parse_options(int argc, char **argv, uint64_t *option_flags,
 	} else {
 		print_help(true, argv[0]);
 		exit(EXIT_FAILURE);
+	}
+
+	if (options->strip_brainfuck) {
+		options->wrap_width = strtoul(wrap_width_str, &endptr, 10);
+		if (*endptr != 0) {
+			print_help(true, argv[0]);
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	return 0;

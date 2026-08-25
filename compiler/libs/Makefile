@@ -5,3 +5,5 @@ target:
 	$(CC) -c helpers.c -o $(BUILD_DIR)/helpers.o $(CFLAGS) -I $(INCLUDE)
 	$(CC) -c brainfuck_opt.c -o $(BUILD_DIR)/brainfuck_opt.o $(CFLAGS) \
 		-I $(INCLUDE)
+	$(CC) -c brainfuck_strip.c -o $(BUILD_DIR)/brainfuck_strip.o $(CFLAGS) \
+		-I $(INCLUDE)

@@ -33,6 +33,7 @@ int main(int argc, char **argv)
 	int bf_fd;
 	struct __array assembly_output;
 	struct compiler_options options;
+	memset(&options, 0, sizeof(options));
 
 	output_pathname[PATH_MAX - 1] = 0;
 	brainfuck_pathname[PATH_MAX - 1] = 0;
@@ -61,7 +62,8 @@ int main(int argc, char **argv)
 	}
 	close(bf_fd);
 
-	if ((option_flags & FL_OUTPUT_ASSEMBLY) == 0) {
+	if ((option_flags & FL_OUTPUT_ASSEMBLY) == 0 &&
+	    !options.strip_brainfuck) {
 		assemble_and_link(assembly_output.data, output_pathname);
 	} else {
 		output_to_file(assembly_output.data, output_pathname);

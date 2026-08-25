@@ -28,7 +28,6 @@ struct __array {
 	size_t length;
 };
 
-
 /**
  * array_init() - initialize an array
  * @arr: the address to the array to initialize

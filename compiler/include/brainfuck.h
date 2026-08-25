@@ -53,12 +53,18 @@ enum comment_behavior {
  * @cell_width: cell width, in bytes, should be one of 1, 2, 4, or 8
  * 	bad stuff may happen if this is not one of those
  * @comments: see above
+ * @strip_brainfuck: if this is true, do not compile, instead output brainfuck
+ * 	code to the output file, stripping it of all comments
+ * @wrap_width: if @strip_brainfuck is true, a newline character is added
+ * 	after this many characters
  */
 struct compiler_options {
 	_Bool optimize;
 	size_t cell_width;
 	enum pointer_behavior overflow;
 	enum comment_behavior comments;
+	_Bool strip_brainfuck;
+	size_t wrap_width;
 };
 
 /**
@@ -92,8 +98,11 @@ struct bf_instruction {
 
 /**
  * compile_brainfuck() - given a file descriptor, convert bf into assembly
+ * 	or if options->strip_brainfuck is set, output stripped brainfuck
  * @assembly_str: the string for the assembly to go to
- * 	it is assumed that this is empty with length = 0
+ * 	it is assumed that this is already initialized, and should be empty.
+ * 	if options->strip_brainfuck is set, then this will be filled with
+ * 	clean brainfuck code
  * @fd: the file descriptor to the brainfuck code
  * @options: brainfuck options, see definition for documentation
  *
@@ -102,7 +111,23 @@ struct bf_instruction {
 int compile_brainfuck(struct __array *assembly_str, const int fd,
 		      const struct compiler_options *options);
 
-/*
+/**
+ * output_brainfuck() - output clean brainfuck given an array of instructions
+ * @output: the output string (array of characters)
+ * @instructions: the array of struct bf_instruction
+ * 	note: all fields except for the instruction field of the bf_instruction
+ * 	is meaningless, despite what the documentation for struct bf_instruction
+ * 	might say, this function ONLY uses the instruction character of
+ * 	the instruction
+ * 	Note: it should only contain actual, real brainfuck
+ * @opts: "compiler" options
+ *
+ * Return: 0 on success, -1 on error
+ */
+int output_brainfuck(struct __array *output, const struct __array *instructions,
+		     const struct compiler_options *opts);
+
+/**
  * get_word_and_multiplier() - get the word specifier, and size multiplier
  * 	based on compiler options
  * @word: this will be set to point to a string literal, either "QWORD", "BYTE",

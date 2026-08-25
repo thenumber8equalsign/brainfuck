@@ -348,24 +348,6 @@ int compile_brainfuck(struct __array *assembly_str, const int fd,
 		return -1;
 	}
 
-	// add on the multiplyer to assembly_begin, because mmap is in bytes
-	tmp = calloc(tmp_len, sizeof(char));
-	if (tmp == NULL) {
-		warn("calloc");
-		array_free(&instructions);
-		return -1;
-	}
-
-	snprintf(tmp, tmp_len, assembly_begin, multiplier);
-	ret = array_append_bulk(assembly_str, tmp, strlen(tmp));
-	free(tmp);
-	tmp = NULL;
-	if (ret != 0) {
-		warn("could not append");
-		array_free(&instructions);
-		return -1;
-	}
-
 	// parse brainfuck
 	_Bool is_comment = false;
 	_Bool is_multi_comment = false;
@@ -447,6 +429,14 @@ int compile_brainfuck(struct __array *assembly_str, const int fd,
 		++i;
 	}
 
+	// if we only wish to strip the brainfuck, do that now and exit
+	if (options->strip_brainfuck) {
+		ret = output_brainfuck(assembly_str, &instructions, options);
+		array_free(&instructions);
+		return ret;
+	}
+
+
 	// apply optimizations
 	instr_data = (struct bf_instruction *)instructions.data;
 	instr_len = instructions.length / sizeof(struct bf_instruction);
@@ -455,6 +445,24 @@ int compile_brainfuck(struct __array *assembly_str, const int fd,
 			optimize_brainfuck(instr_len, instr_data, options);
 		instructions.length = new_len * sizeof(struct bf_instruction);
 		instr_len = new_len;
+	}
+
+	// add on the multiplyer to assembly_begin, because mmap is in bytes
+	tmp = calloc(tmp_len, sizeof(char));
+	if (tmp == NULL) {
+		warn("calloc");
+		array_free(&instructions);
+		return -1;
+	}
+
+	snprintf(tmp, tmp_len, assembly_begin, multiplier);
+	ret = array_append_bulk(assembly_str, tmp, strlen(tmp));
+	free(tmp);
+	tmp = NULL;
+	if (ret != 0) {
+		warn("could not append");
+		array_free(&instructions);
+		return -1;
 	}
 
 	// convert to assembly
