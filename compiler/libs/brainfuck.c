@@ -15,6 +15,8 @@
 #include <brainfuck.h>
 #include <brainfuck_opt.h>
 
+#define TWO_32 (1ULL << 32)
+
 /**
  * instruction_to_assembly() - convert a brainfuck_instruction to assembly
  * @instruction: the struct brainfuck_instruction to convert
@@ -87,20 +89,38 @@ static void instruction_to_assembly(const struct bf_instruction *instruction,
 
 	const _Bool undefined_overflow = options->overflow == POINTER_UNDEFINED;
 
+	// this works due to distributive property of modulo
 	ssize_t rep = (modulo == 0) ? instruction->repetitions :
 				      instruction->repetitions % modulo;
+
+	ssize_t _rep = instruction->repetitions;
 
 	// rbx is containing the address of the array
 	// r12 is containing the pointer
 
 	if (instruction->instruction == '+') {
-		// this works due to distributive property of modulo
+		// if we somehow have more than 4 billion increments
+		// make sure we generate assembly the ISA actually supports
+		if (rep % TWO_32 != rep) {
+			const char *format = "\tmov\trdi, %zd\n"
+					     "\tadd\t%s ptr [rbx+r12%s], rdi\n";
+			sprintf(str, format, rep, word, multiplier);
+			return;
+		}
+
 		const char *format = "\tadd	%s ptr [rbx+r12%s], %zd\n";
 		sprintf(str, format, word, multiplier, rep);
 		return;
 	}
 
 	if (instruction->instruction == '-') {
+		if (rep % TWO_32 != rep) {
+			const char *format = "\tmov\trdi, %zd\n"
+					     "\tsub\t%s ptr [rbx+r12%s], rdi\n";
+			sprintf(str, format, rep, word, multiplier);
+			return;
+		}
+
 		const char *format = "\tsub	%s ptr [rbx+r12%s], %zd\n";
 		sprintf(str, format, word, multiplier, rep);
 		return;
@@ -114,23 +134,35 @@ static void instruction_to_assembly(const struct bf_instruction *instruction,
 		sprintf(str, format, instruction->repetitions);
 		return;
 	} else if (instruction->instruction == '<' && undefined_overflow) {
-		const char *format = "\tmov	rdi, %lu\n"
+		const char *format = "\tmov	rdi, %zd\n"
 				     "\tsub	r12, rdi\n";
-		sprintf(str, format, instruction->repetitions);
+
+		if (_rep % TWO_32 == _rep) {
+			// sub only supports 32 bit immidates (or less)
+			format = "\tsub\tr12, %zd\n";
+		}
+
+		sprintf(str, format, _rep);
 		return;
 	}
 
 	if (instruction->instruction == '>' && !undefined_overflow) {
 		const char *format = "\tmov	rdi, r12\n"
-				     "\tmov	rsi, %lu\n"
+				     "\tmov	rsi, %zd\n"
 				     "\tcall	increment_pointer\n"
 				     "\tmov	r12, rax\n";
 		sprintf(str, format, instruction->repetitions);
 		return;
 	} else if (instruction->instruction == '>' && undefined_overflow) {
-		const char *format = "\tmov	rdi, %lu\n"
+		const char *format = "\tmov	rdi, %zd\n"
 				     "\tadd	r12, rdi\n";
-		sprintf(str, format, instruction->repetitions);
+
+		if (_rep % TWO_32 == _rep) {
+			// add only supports 32 bit immidates (or less)
+			format = "\tadd\tr12, %zd\n";
+		}
+
+		sprintf(str, format, _rep);
 		return;
 	}
 
