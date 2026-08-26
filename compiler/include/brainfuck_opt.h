@@ -38,6 +38,20 @@ void collapse_instructions(size_t len, struct bf_instruction instrs[static len],
 			   const struct compiler_options *opts);
 
 /**
+ * collapse_instructions() - collapse repeated opposite instructions
+ * @len: current length of the instrs array
+ * @instrs: the bf_instruction array representing the program
+ * @opts: compiler options
+ *
+ * Note: collapse_instructions() may have to be called first
+ *
+ * Return: None
+ */
+void remove_opposite_instructions(size_t len,
+				  struct bf_instruction instrs[static len],
+				  const struct compiler_options *opts);
+
+/**
  * zero_cell() - optimize [-] and [+] to a zero instruction
  * @len: current length of the instrs array
  * @instrs: the bf_instruction array representing the program

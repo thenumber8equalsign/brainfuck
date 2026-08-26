@@ -239,24 +239,37 @@ static size_t optimize_brainfuck(size_t len, struct bf_instruction *instrs,
 	collapse_instructions(len, instrs, opts);
 	len = purge_instructions(len, instrs);
 	// sanity check
+#ifdef DEBUG
 	for (size_t i = 0; i < len; ++i) {
 		assert(instrs[i].repetitions != 0);
 	}
+#endif
+
+	remove_opposite_instructions(len, instrs, opts);
+	len = purge_instructions(len, instrs);
+#ifdef DEBUG
+	for (size_t i = 0; i < len; ++i) {
+		assert(instrs[i].repetitions != 0);
+	}
+#endif
 
 	optimize_zero_cell(len, instrs, opts);
 	len = purge_instructions(len, instrs);
+#ifdef DEBUG
 	for (size_t i = 0; i < len; ++i) {
 		assert(instrs[i].repetitions != 0);
 	}
+#endif
 
 	optimize_square_algorithm(len, instrs, opts);
 	len = purge_instructions(len, instrs);
-
+#ifdef DEBUG
 	for (size_t i = 0; i < len; ++i) {
 		assert(instrs[i].repetitions != 0);
 	}
+#endif
 
-	// i literally have no idea why,
+	// i have no idea why,
 	// but is_64_bit.bf hangs for seemingly forever on my t480
 	// (i don't have my desktop with me right now), i waited 3 minutes.
 	// Whenever i comment this out and set cell size to 8
@@ -264,10 +277,11 @@ static size_t optimize_brainfuck(size_t len, struct bf_instruction *instrs,
 	// After fixing my broken brainfuck code, this is no longer needed
 	collapse_instructions(len, instrs, opts);
 	len = purge_instructions(len, instrs);
+#ifdef DEBUG
 	for (size_t i = 0; i < len; ++i) {
 		assert(instrs[i].repetitions != 0);
 	}
-
+#endif
 	return len;
 }
 
@@ -435,7 +449,6 @@ int compile_brainfuck(struct __array *assembly_str, const int fd,
 		array_free(&instructions);
 		return ret;
 	}
-
 
 	// apply optimizations
 	instr_data = (struct bf_instruction *)instructions.data;

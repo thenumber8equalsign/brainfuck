@@ -74,6 +74,9 @@ struct compiler_options {
  * 	only useful if it is +, -, <, or >
  * 	a value of 0 will effectively remove the instruction
  * 	for all instructions
+ * 	the fact that this is signed (usually) means nothing, this is only
+ *	signed so that the algorithm optimizers may compare the instructions
+ * 	to a generated algorithm
  * @loop_index: the index of the loop (only useful if instruction is '[' or ']')
  * @corrosponding_open: if instruction is ']', then the pointer to the
  * 	corrosponding open loop instruction
@@ -115,16 +118,17 @@ int compile_brainfuck(struct __array *assembly_str, const int fd,
  * output_brainfuck() - output clean brainfuck given an array of instructions
  * @output: the output string (array of characters)
  * @instructions: the array of struct bf_instruction
- * 	note: all fields except for the instruction field of the bf_instruction
- * 	is meaningless, despite what the documentation for struct bf_instruction
- * 	might say, this function ONLY uses the instruction character of
- * 	the instruction
- * 	Note: it should only contain actual, real brainfuck
+ *	the ONLY optimizations allowed are collapse_instructions()
+ * 	however, ALL repeated instructions will be outputted multiple times
+ * 	to the output string, so it will output >>> instead of a single >
+ * 	if repetitions is 3, ALL instructions will be repeated.
+ * 	it may be modified.
+ * 	it should only contain actual, real brainfuck
  * @opts: "compiler" options
  *
  * Return: 0 on success, -1 on error
  */
-int output_brainfuck(struct __array *output, const struct __array *instructions,
+int output_brainfuck(struct __array *output, struct __array *instructions,
 		     const struct compiler_options *opts);
 
 /**

@@ -48,6 +48,7 @@ int main(int argc, char **argv)
 		err(EXIT_FAILURE, "can not access %s", brainfuck_pathname);
 	}
 
+#ifndef TEST_MEMORY_LEAKS
 	ret = array_init(&assembly_output);
 	if (ret != 0) {
 		warn("could not init");
@@ -70,5 +71,22 @@ int main(int argc, char **argv)
 	}
 
 	array_free(&assembly_output);
+#else
+	for (;;) {
+		ret = array_init(&assembly_output);
+		if (ret != 0) {
+			warn("could not init");
+		}
+
+		ret = compile_brainfuck(&assembly_output, bf_fd, &options);
+		if (ret != 0) {
+			array_free(&assembly_output);
+			warnx("could not compile");
+			return -1;
+		}
+
+		array_free(&assembly_output);
+	}
+#endif
 	return 0;
 }

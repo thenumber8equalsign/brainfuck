@@ -1,4 +1,3 @@
-#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include <err.h>
@@ -6,6 +5,11 @@
 #include <brainfuck.h>
 #include <brainfuck_opt.h>
 #include <arrays.h>
+
+#ifdef DEBUG
+#include <assert.h>
+#endif
+
 
 size_t purge_instructions(size_t len, struct bf_instruction instrs[static len])
 {
@@ -54,7 +58,16 @@ void collapse_instructions(size_t len, struct bf_instruction instrs[static len],
 			instrs[i - 1].repetitions = 0;
 			continue;
 		}
+	}
+}
 
+void remove_opposite_instructions(size_t len,
+				  struct bf_instruction instrs[static len],
+				  const struct compiler_options *opts)
+{
+	for (size_t i = 1; i < len; ++i) {
+		const char prev = instrs[i - 1].instruction;
+		const char cur = instrs[i].instruction;
 		if (!is_opposite_instruction(prev, cur))
 			continue;
 
@@ -156,9 +169,11 @@ static void generate_square_algorithm(struct bf_instruction alg[static 32],
 		alg[i].repetitions = 1;
 	}
 	alg[17].repetitions = 2;
+#ifdef DEBUG
 	assert(algs[6] == '+');
 	assert(alg[6].instruction == '+');
 	assert(algs[17] == '+');
+#endif
 
 	alg[1].repetitions = tmp1 - tmp0;
 	alg[3].repetitions = -tmp1;
@@ -280,13 +295,15 @@ static void opt_square_alg_helper(size_t i, struct bf_instruction *instrs,
 		}
 
 		// alg is already containing signed repetitions
-		ssize_t rep_a = 0;// alg[alg_i].repetitions;
+		ssize_t rep_a = 0; // alg[alg_i].repetitions;
 		ssize_t rep_i = 0;
 		int b = get_signed_repetitions(&instrs[j], &rep_i);
 		int a = get_signed_repetitions(&alg[alg_i], &rep_a);
 
+#ifdef DEBUG
 		assert(b == 0); // sanity check
 		assert(a == 0);
+#endif
 
 		if (rep_a != rep_i) {
 			is_square_algorithm = false;
