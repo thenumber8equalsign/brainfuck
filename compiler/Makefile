@@ -5,7 +5,7 @@ COMMON_FLAGS := -O2
 #COMMON_FLAGS := $(COMMON_FLAGS) -D DEBUG
 
 # uncomment to check for memory leaks
-# after running the executable, check memory usage using preferred choice
+# after running the executable, check memory usage using preferred method
 #COMMON_FLAGS := $(COMMON_FLAGS) -D TEST_MEMORY_LEAKS
 
 export COMMON_FLAGS
