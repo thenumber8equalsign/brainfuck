@@ -20,7 +20,3 @@ TODO: rewrite the interpreter to be better and optimizing
 GOAL: general loop optimizer
 to optimize simple loops like
 [(move)(inc/dec)(repeat on a different cell)(return to a control and decrement)]
-
-TODO: brainfuck stripper: remove opposing -/+ and </>, as they can be removed
-and optimized, without changing the behavior of the brainfuck, and not using
-anything exclusive to this implementation
