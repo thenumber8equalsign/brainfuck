@@ -9,6 +9,11 @@ file
 
 and there is an interpreter located at interpreter/
 
+to build the interpreter, you don't need instructions, its literally 1 file
+
+to build the compiler, first cd into the compiler/ directory,
+then run `make all` and add -j$(nproc) if you wish
+
 that's all!
 
 brainfuck examples:
