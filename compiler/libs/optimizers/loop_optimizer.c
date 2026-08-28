@@ -1,3 +1,4 @@
+#include "brainfuck.h"
 #include <config.h>
 #include <brainfuck_opt.h>
 #include <stdbool.h>
@@ -11,8 +12,7 @@ struct loop_piece {
 	ssize_t increments;
 };
 
-static void loop_helper(size_t i, size_t len,
-			struct bf_instruction instrs[static len],
+static void loop_helper(size_t i, struct __array *arr,
 			const struct compiler_options *opts)
 {
 	// this optimizer can only handle simple loops,
@@ -20,6 +20,8 @@ static void loop_helper(size_t i, size_t len,
 	_Bool found = false;
 	size_t end_index = 0;
 	_Bool cond = false; // this helps me avoid the 80 character bar in ifs
+	size_t len = arr->length / sizeof(struct bf_instruction);
+	struct bf_instruction *instrs = (void *)arr->data;
 	for (size_t j = i + 1; j < len; ++j) {
 		if (instrs[j].instruction == '[') {
 			// return if we find that we have a nested loop
@@ -66,15 +68,19 @@ static void loop_helper(size_t i, size_t len,
 
 	// get an array of type struct loop_piece
 	// which will represent how many increments each offset gets
+	// we move to each and every cell
+	// we then
 }
 
-void loop_optimizer(size_t len, struct bf_instruction instrs[static len],
-		    const struct compiler_options *opts)
+void loop_optimizer(struct __array *arr, const struct compiler_options *opts)
 {
-	for (size_t i = 0; i < len; ++i) {
+	for (size_t i = 0; i < arr->length / sizeof(struct bf_instruction);) {
+		struct bf_instruction *instrs = (void *)arr->data;
 		if (instrs[i].instruction != '[') {
 			continue;
 		}
-		loop_helper(i, len, instrs, opts);
+		loop_helper(i, arr, opts);
+
+		++i;
 	}
 }

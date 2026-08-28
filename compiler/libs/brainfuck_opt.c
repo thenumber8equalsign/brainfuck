@@ -13,9 +13,10 @@
 #include <assert.h>
 #endif
 
-
-size_t purge_instructions(size_t len, struct bf_instruction instrs[static len])
+void purge_instructions(struct __array *arr)
 {
+	size_t len = arr->length / sizeof(struct bf_instruction);
+	struct bf_instruction *instrs = (struct bf_instruction *)arr->data;
 	for (size_t i = 0; i < len;) {
 		const _Bool val = instrs[i].repetitions == 0;
 
@@ -29,7 +30,7 @@ size_t purge_instructions(size_t len, struct bf_instruction instrs[static len])
 			++i;
 		}
 	}
-	return len;
+	arr->length = len * sizeof(struct bf_instruction);
 }
 
 static _Bool is_collapsable_instruction(char instruction)
@@ -44,9 +45,11 @@ static _Bool is_opposite_instruction(char a, char b)
 	       (a == '-' && b == '+') || (a == '>' && b == '<');
 }
 
-void collapse_instructions(size_t len, struct bf_instruction instrs[static len],
+void collapse_instructions(struct __array *arr,
 			   const struct compiler_options *opts)
 {
+	size_t len = arr->length / sizeof(struct bf_instruction);
+	struct bf_instruction *instrs = (struct bf_instruction *)arr->data;
 	for (size_t i = 1; i < len; ++i) {
 		const char prev = instrs[i - 1].instruction;
 		const char cur = instrs[i].instruction;
@@ -64,10 +67,11 @@ void collapse_instructions(size_t len, struct bf_instruction instrs[static len],
 	}
 }
 
-void remove_opposite_instructions(size_t len,
-				  struct bf_instruction instrs[static len],
+void remove_opposite_instructions(struct __array *arr,
 				  const struct compiler_options *opts)
 {
+	size_t len = arr->length / sizeof(struct bf_instruction);
+	struct bf_instruction *instrs = (void *)arr->data;
 	for (size_t i = 1; i < len; ++i) {
 		const char prev = instrs[i - 1].instruction;
 		const char cur = instrs[i].instruction;
@@ -92,9 +96,11 @@ void remove_opposite_instructions(size_t len,
 	}
 }
 
-void optimize_zero_cell(size_t len, struct bf_instruction instrs[static len],
+void optimize_zero_cell(struct __array *arr,
 			const struct compiler_options *opts)
 {
+	size_t len = arr->length / sizeof(struct bf_instruction);
+	struct bf_instruction *instrs = (void *)arr->data;
 	for (size_t i = 0; i < len - 2 && len > 2; ++i) {
 		if (instrs[i].repetitions == 0) {
 			continue;

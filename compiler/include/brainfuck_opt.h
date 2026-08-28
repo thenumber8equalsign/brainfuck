@@ -63,67 +63,59 @@ static inline _Bool is_pointer_instruction(const struct bf_instruction *instr)
 
 /**
  * purge_instructions() - delete all instructions where repetitions is 0
- * @len: the current length of the array
- * @instrs: the array of instructions representing the program
+ * @arr: the array of struct bf_instruction
  *
- * Return: the new length of the array
+ * Return: None
  */
-size_t purge_instructions(size_t len, struct bf_instruction instrs[static len]);
+void purge_instructions(struct __array *arr);
 
 /**
  * collapse_instructions() - collapse repeated -+<>
- * @len: current length of the instrs array
- * @instrs: the bf_instruction array representing the program
+ * @arr: the array of struct bf_instruction
  * @opts: compiler options
  *
  * Return: None
  */
-void collapse_instructions(size_t len, struct bf_instruction instrs[static len],
+void collapse_instructions(struct __array *arr,
 			   const struct compiler_options *opts);
 
 /**
- * collapse_instructions() - collapse repeated opposite instructions
- * @len: current length of the instrs array
- * @instrs: the bf_instruction array representing the program
+ * remove_opposite_instructions() - collapse repeated opposite instructions
+ * @arr: the array of struct bf_instruction
  * @opts: compiler options
  *
  * Note: collapse_instructions() may have to be called first
  *
  * Return: None
  */
-void remove_opposite_instructions(size_t len,
-				  struct bf_instruction instrs[static len],
+void remove_opposite_instructions(struct __array *arr,
 				  const struct compiler_options *opts);
 
 /**
  * zero_cell() - optimize [-] and [+] to a zero instruction
- * @len: current length of the instrs array
- * @instrs: the bf_instruction array representing the program
+ * @arr: the array of struct bf_instruction
  * @opts: compiler options
  *
  * Return: None
  */
-void optimize_zero_cell(size_t len, struct bf_instruction instrs[static len],
+void optimize_zero_cell(struct __array *arr,
 			const struct compiler_options *opts);
 
 /**
  * square_algorithm() - optimize the squaring algorithm
- * @len: current length of the instrs array
- * @instrs: the bf_instruction array representing the program
+ * @arr: the array of struct bf_instruction
  * @opts: compiler options
  *
  * Note: a call to collapse_instructions may be necessary after calling this
  *
  * Return: None
  */
-void optimize_square_algorithm(size_t len,
-			       struct bf_instruction instrs[static len],
+void optimize_square_algorithm(struct __array *arr,
 			       const struct compiler_options *opts);
 
 /**
  * loop_optimizer() - general loop optimizer
- * @len: current length of the instrs array
- * @instrs: the bf_instruction array representing the program
+ * @arr: the bf_instruction array representing the program
  * @opts: compiler options
  *
  * This will optimize away loops in the form
@@ -132,10 +124,9 @@ void optimize_square_algorithm(size_t len,
  * at the start of the loop, the control should be the pointed-to value
  * in other words, the net displacement over the loop should be 0
  *
- *
+ * Return: None
  */
-void loop_optimizer(size_t len, struct bf_instruction instrs[static len],
-		    const struct compiler_options *opts);
+void loop_optimizer(struct __array *arr, const struct compiler_options *opts);
 
 #ifdef __cplusplus
 }

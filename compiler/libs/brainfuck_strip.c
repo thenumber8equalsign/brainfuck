@@ -6,23 +6,20 @@
 #include <brainfuck_opt.h>
 #include <assert.h>
 
-int output_brainfuck(struct __array *output, struct __array *instructions,
+int output_brainfuck(struct __array *output, struct __array *arr,
 		     const struct compiler_options *opts)
 {
-	struct bf_instruction *instrs =
-		(struct bf_instruction *)instructions->data;
-	size_t len =
-		instructions->length / sizeof(struct bf_instruction);
+	struct bf_instruction *instrs = (void *)arr->data;
 	const size_t wrap = opts->wrap_width;
 	int ret = 0;
 
-	collapse_instructions(len, instrs, opts);
-	len = purge_instructions(len, instrs);
+	collapse_instructions(arr, opts);
+	purge_instructions(arr);
 
-	remove_opposite_instructions(len, instrs, opts);
-	len = purge_instructions(len, instrs);
+	remove_opposite_instructions(arr, opts);
+	purge_instructions(arr);
 
-	instructions->length = len * sizeof(struct bf_instruction);
+	size_t len = arr->length / sizeof(struct bf_instruction);
 
 	size_t ci = 0;
 	for (size_t i = 0; i < len; ++i) {

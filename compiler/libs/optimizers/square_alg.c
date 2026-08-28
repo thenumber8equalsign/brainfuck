@@ -252,10 +252,11 @@ static void opt_square_alg_helper(size_t i, struct bf_instruction *instrs,
 	}
 }
 
-void optimize_square_algorithm(size_t len,
-			       struct bf_instruction instrs[static len],
+void optimize_square_algorithm(struct __array *arr,
 			       const struct compiler_options *opts)
 {
+	size_t len = arr->length / sizeof(struct bf_instruction);
+	struct bf_instruction *instrs = (void *)arr->data;
 	for (size_t i = 0; i < len - 31 && len > 31; ++i) {
 		opt_square_alg_helper(i, instrs, opts);
 	}

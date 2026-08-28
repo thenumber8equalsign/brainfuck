@@ -31,8 +31,10 @@ static void instruction_to_assembly(const struct bf_instruction *instruction,
 				    char *str,
 				    const struct compiler_options *options)
 {
-	if (instruction->repetitions == 0)
+	if (instruction->repetitions == 0) {
+		sprintf(str, "");
 		return;
+	}
 
 	if (instruction->assembly.data != NULL) {
 		strcpy(str, instruction->assembly.data);
@@ -289,70 +291,28 @@ static _Bool is_bf_instruction(char instruction)
 	return false;
 }
 
-// returns the new length
-// the new length will never be greater than the old length
-static size_t optimize_brainfuck(size_t len, struct bf_instruction *instrs,
-				 const struct compiler_options *opts)
+static void optimize_brainfuck(struct __array *arr,
+			       const struct compiler_options *opts)
 {
-	collapse_instructions(len, instrs, opts);
-	len = purge_instructions(len, instrs);
-	// sanity check
-#ifdef DEBUG
-	for (size_t i = 0; i < len; ++i) {
-		assert(instrs[i].repetitions != 0);
-	}
-#endif
+	collapse_instructions(arr, opts);
+	purge_instructions(arr);
 
-	remove_opposite_instructions(len, instrs, opts);
-	len = purge_instructions(len, instrs);
-#ifdef DEBUG
-	for (size_t i = 0; i < len; ++i) {
-		assert(instrs[i].repetitions != 0);
-	}
-#endif
+	// remove_opposite_instructions(arr, opts);
+	// purge_instructions(arr);
 
-	optimize_zero_cell(len, instrs, opts);
-	len = purge_instructions(len, instrs);
-#ifdef DEBUG
-	for (size_t i = 0; i < len; ++i) {
-		assert(instrs[i].repetitions != 0);
-	}
-#endif
+	// optimize_zero_cell(arr, opts);
+	// purge_instructions(arr);
 
-	optimize_square_algorithm(len, instrs, opts);
-	len = purge_instructions(len, instrs);
-#ifdef DEBUG
-	for (size_t i = 0; i < len; ++i) {
-		assert(instrs[i].repetitions != 0);
-	}
-#endif
+	// optimize_square_algorithm(arr, opts);
+	// purge_instructions(arr);
 
-	// i have no idea why,
-	// but is_64_bit.bf hangs for seemingly forever on my t480
-	// (i don't have my desktop with me right now), i waited 3 minutes.
-	// Whenever i comment this out and set cell size to 8
-
-	// After fixing my broken brainfuck code, this is no longer needed
-	// but still better because there still may be repeated instructions
-	collapse_instructions(len, instrs, opts);
-	len = purge_instructions(len, instrs);
-#ifdef DEBUG
-	for (size_t i = 0; i < len; ++i) {
-		assert(instrs[i].repetitions != 0);
-	}
-#endif
+	// collapse_instructions(arr, opts);
+	// purge_instructions(arr);
 
 	// put extra algorithm-specific optimizers here, before loop_optimizer
 
-	loop_optimizer(len, instrs, opts);
-	len = purge_instructions(len, instrs);
-
-#ifdef DEBUG
-	for (size_t i = 0; i < len; ++i) {
-		assert(instrs[i].repetitions != 0);
-	}
-#endif
-	return len;
+	// loop_optimizer(arr, opts);
+	// purge_instructions(arr);
 }
 
 static void check_comments(char instr, char next_instr, _Bool *is_comm,
@@ -539,10 +499,9 @@ int compile_brainfuck(struct __array *assembly_str, const int fd,
 
 	// apply optimizations
 	if (options->optimize) {
-		size_t new_len =
-			optimize_brainfuck(instr_len, instr_data, options);
-		instructions.length = new_len * sizeof(struct bf_instruction);
-		instr_len = new_len;
+		optimize_brainfuck(&instructions, options);
+		instr_len = instructions.length / sizeof(struct bf_instruction);
+		instr_data = (void *)instructions.data;
 	}
 
 	// add on the multiplyer to assembly_begin, because mmap is in bytes
