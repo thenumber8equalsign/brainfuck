@@ -5,11 +5,6 @@
 #include <brainfuck_opt.h>
 #include <assert.h>
 
-static _Bool is_pointer_instruction(const struct bf_instruction *instr)
-{
-	return instr->instruction == '<' || instr->instruction == '>';
-}
-
 static void generate_square_algorithm(struct bf_instruction alg[static 32],
 				      ssize_t tmp0, ssize_t tmp1)
 {

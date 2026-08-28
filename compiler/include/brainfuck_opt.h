@@ -41,6 +41,18 @@ static inline int get_signed_repetitions(const struct bf_instruction *instr,
 	return -1;
 }
 
+/**
+ * is_pointer_instruction() - check if an instruction is moving the pointer
+ * @instr: the instruction
+ *
+ * Return: true if instr->instruction is '<' or '>'
+ * 	false otherwise
+ */
+static inline _Bool is_pointer_instruction(const struct bf_instruction *instr)
+{
+	return instr->instruction == '<' || instr->instruction == '>';
+}
+
 // The following instructions are used to optimize the brainfuck code
 // Note: one must collapse instructions first, as other functions
 // depend on this happening,
@@ -116,7 +128,10 @@ void optimize_square_algorithm(size_t len,
  *
  * This will optimize away loops in the form
  * [(move)(inc/dec)(repeat)(to_control)(dec)]
- * as those will add a multiple of the control to the cells
+ * as those will add a multiple of the control to the cells.
+ * at the start of the loop, the control should be the pointed-to value
+ * in other words, the net displacement over the loop should be 0
+ *
  *
  */
 void loop_optimizer(size_t len, struct bf_instruction instrs[static len],

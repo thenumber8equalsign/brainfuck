@@ -88,6 +88,8 @@ struct compiler_options {
  * 	this is defined as "being set" if the data attribute of __array
  * 	is not NULL
  * 	This is a string
+ * @line_number: which line in the source file this instruction came from
+ * 	(0-indexed)
  *
  * Extra Instructions (for compiler use only, not in the brainfuck code)
  * 	'z': zero current cell
@@ -98,6 +100,7 @@ struct bf_instruction {
 	size_t loop_index;
 	const struct bf_instruction *corrosponding_open;
 	struct __array assembly;
+	size_t line_number;
 };
 
 /**
@@ -131,6 +134,27 @@ int compile_brainfuck(struct __array *assembly_str, const int fd,
  */
 int output_brainfuck(struct __array *output, struct __array *instructions,
 		     const struct compiler_options *opts);
+
+/**
+ * validate_brainfuck() - validate an array of bf_instructions
+ * @len: the length of the instrs array
+ * @instrs: the array of instructions representing the program
+ * @index_of_failure: where to put the index of the instruction that failed
+ * 	to validate
+ *
+ * This function will check the program to ensure it is valid brainfuck,
+ * if it is not valid brainfuck, index_of_failure will be set to the index
+ * in the array instrs that failed.
+ * This function will only ensure that all loops are matched
+ *
+ * Return: 0 indicates all good and it is valid, index_of_failure will remain
+ * 	untouched.
+ * 	a non-zero value indicates the brainfuck is invalid, index_of_failure
+ * 	will be set
+ */
+int validate_brainfuck(size_t len,
+		       const struct bf_instruction instrs[static len],
+		       size_t *index_of_failure);
 
 /**
  * get_word_and_multiplier() - get the word specifier, and size multiplier

@@ -20,7 +20,3 @@ TODO: rewrite the interpreter to be better and optimizing
 GOAL: general loop optimizer
 to optimize simple loops like
 [(move)(inc/dec)(repeat on a different cell)(return to a control and decrement)]
-
-TODO: right now, we get a linker error if we have unmatched open loops,
-so validate the brainfuck by trying to match all unmatched loops
-(and also print line numbers)

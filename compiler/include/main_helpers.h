@@ -14,8 +14,6 @@
  * @use_stderr: if true, output to stderr, otherwise output to stdout
  * @argv0: argv[0]
  *
- * Context: will not sleep
- *
  * Return: none
  */
 void print_help(bool use_stderr, const char *argv0);

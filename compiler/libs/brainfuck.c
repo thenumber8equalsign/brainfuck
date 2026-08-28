@@ -25,8 +25,6 @@
  *
  * if instruction->repetitions is 0, nothing happens
  *
- * Context: will not sleep
- *
  * Return: none
  */
 static void instruction_to_assembly(const struct bf_instruction *instruction,
@@ -219,8 +217,6 @@ static void instruction_to_assembly(const struct bf_instruction *instruction,
  *
  * braces[index] should be the one we just created
  *
- * Context: no sleep
- *
  * Return: the pointer to the corrosponding open brace, or NULL
  */
 static const struct bf_instruction *
@@ -246,10 +242,40 @@ find_open_brace(const struct bf_instruction *instrs, size_t index)
 }
 
 /**
+ * find_close_brace() - same as above, but close
+ * @braces: the array of braces
+ * @i: the index of the close brace you just inserted into the array
+ * @len: the length of the array
+ *
+ * braces[index] should be the one we just created
+ *
+ * Return: the pointer to the corrosponding open brace, or NULL
+ */
+static const struct bf_instruction *
+find_close_brace(const struct bf_instruction *instrs, size_t i, size_t len)
+{
+	++i;
+	size_t num_loops = 0;
+	while (i < len) {
+		if (instrs[i].instruction == ']' && num_loops == 0)
+			break;
+		else if (instrs[i].instruction == '[')
+			++num_loops;
+		else if (instrs[i].instruction == ']' && num_loops != 0)
+			--num_loops;
+
+		++i;
+	}
+
+	if (i >= len)
+		return NULL;
+
+	return &(instrs[i]);
+}
+
+/**
  * is_bf_instruction() - check if a character is a valid brainfuck instruction
  * @instruction: the character to test
- *
- * Context: no sleep
  *
  * Return: true if instruction is a brainfuck instruction, false otherwise
  */
@@ -362,8 +388,7 @@ static void check_comments(char instr, char next_instr, _Bool *is_comm,
  * @fd: the file descriptor to the brainfuck code
  * @options: brainfuck options, see definition for documentation
  *
- * Context: might take a long time, but it shouldn't sleep, it also might
- * 	exit the program because of err()
+ * Context: may call err() or exit()
  *
  * Return: 0 on success, -1 on error
  */
@@ -382,6 +407,7 @@ int compile_brainfuck(struct __array *assembly_str, const int fd,
 	size_t tmp_len = strlen(assembly_begin) + 50;
 	const char *multiplier = "";
 	const char *word = "";
+	size_t fail = 0;
 
 	get_word_and_multiplier(&word, &multiplier, options);
 
@@ -409,10 +435,11 @@ int compile_brainfuck(struct __array *assembly_str, const int fd,
 	// parse brainfuck
 	_Bool is_comment = false;
 	_Bool is_multi_comment = false;
+	size_t lineno = 0;
 	for (size_t loop_counter = 0, i = 0;;) {
-		char instruction;
-		char next_instruction = 0;
-		ssize_t r = read(fd, &instruction, 1);
+		char cur = 0;
+		char next = 0;
+		ssize_t r = read(fd, &cur, 1);
 		if (r == 0) {
 			break;
 		} else if (r == -1) {
@@ -428,20 +455,24 @@ int compile_brainfuck(struct __array *assembly_str, const int fd,
 			return -1;
 		}
 
-		r = pread(fd, &next_instruction, 1, off);
+		r = pread(fd, &next, 1, off);
 		if (r == 0) {
-			next_instruction = 0;
+			next = 0;
 		} else if (r == -1) {
 			warn("pread");
 			array_free(&instructions);
 			return -1;
 		}
 
-		check_comments(instruction, next_instruction, &is_comment,
-			       &is_multi_comment, options->comments);
+		if (cur == '\n') {
+			++lineno;
+		}
 
-		const _Bool eighty = !is_bf_instruction(instruction) ||
-				     is_comment || is_multi_comment;
+		check_comments(cur, next, &is_comment, &is_multi_comment,
+			       options->comments);
+
+		const _Bool eighty = !is_bf_instruction(cur) || is_comment ||
+				     is_multi_comment;
 		if (eighty) {
 			continue;
 		}
@@ -450,27 +481,26 @@ int compile_brainfuck(struct __array *assembly_str, const int fd,
 		memset(&instr, 0, sizeof(instr));
 
 		instr.repetitions = 1;
-		instr.instruction = instruction;
+		instr.instruction = cur;
 
 		instr.corrosponding_open = NULL;
 		instr.loop_index = -1;
 		instr.assembly.data = NULL;
+		instr.line_number = lineno;
 
-		if (instruction == '[') {
+		if (cur == '[') {
 			instr.loop_index = loop_counter;
 			++loop_counter;
 		}
 
-		if (instruction == ']') {
+		if (cur == ']') {
+			// since we are not C++, we can cast to void * instead
+			// and avoid crossing the 80 character line
 			instr.corrosponding_open = find_open_brace(
-				(const struct bf_instruction *)instructions.data,
-				i);
+				(const void *)instructions.data, i);
+		}
 
-			if (instr.corrosponding_open == NULL) {
-				fprintf(stderr, "invalid brainfuck\n");
-				exit(EXIT_FAILURE);
-			}
-
+		if (instr.corrosponding_open != NULL) {
 			instr.loop_index = instr.corrosponding_open->loop_index;
 		}
 
@@ -487,6 +517,19 @@ int compile_brainfuck(struct __array *assembly_str, const int fd,
 		++i;
 	}
 
+	instr_data = (struct bf_instruction *)instructions.data;
+	instr_len = instructions.length / sizeof(struct bf_instruction);
+	ret = validate_brainfuck(instr_len, instr_data, &fail);
+	if (ret != 0) {
+		const char *format = "unmatched %s at line %zu\n";
+		fprintf(stderr, format,
+			instr_data[fail].instruction == '[' ? "open loop" :
+							      "close loop",
+			instr_data[fail].line_number + 1);
+		array_free(&instructions);
+		return -1;
+	}
+
 	// if we only wish to strip the brainfuck, do that now and exit
 	if (options->strip_brainfuck) {
 		ret = output_brainfuck(assembly_str, &instructions, options);
@@ -495,8 +538,6 @@ int compile_brainfuck(struct __array *assembly_str, const int fd,
 	}
 
 	// apply optimizations
-	instr_data = (struct bf_instruction *)instructions.data;
-	instr_len = instructions.length / sizeof(struct bf_instruction);
 	if (options->optimize) {
 		size_t new_len =
 			optimize_brainfuck(instr_len, instr_data, options);
@@ -590,5 +631,27 @@ int compile_brainfuck(struct __array *assembly_str, const int fd,
 		return -1;
 	}
 
+	return 0;
+}
+
+int validate_brainfuck(size_t len,
+		       const struct bf_instruction instrs[static len],
+		       size_t *index_of_failure)
+{
+	for (size_t i = 0; i < len; ++i) {
+		const char instr = instrs[i].instruction;
+		const struct bf_instruction *a;
+
+		if (instr == '[') {
+			a = find_close_brace(instrs, i, len);
+		} else if (instr == ']') {
+			a = find_open_brace(instrs, i);
+		}
+
+		if (a == NULL) {
+			*index_of_failure = i;
+			return 1;
+		}
+	}
 	return 0;
 }
