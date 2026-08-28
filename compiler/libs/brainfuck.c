@@ -297,22 +297,22 @@ static void optimize_brainfuck(struct __array *arr,
 	collapse_instructions(arr, opts);
 	purge_instructions(arr);
 
-	// remove_opposite_instructions(arr, opts);
-	// purge_instructions(arr);
+	remove_opposite_instructions(arr, opts);
+	purge_instructions(arr);
 
-	// optimize_zero_cell(arr, opts);
-	// purge_instructions(arr);
+	optimize_zero_cell(arr, opts);
+	purge_instructions(arr);
 
-	// optimize_square_algorithm(arr, opts);
-	// purge_instructions(arr);
+	optimize_square_algorithm(arr, opts);
+	purge_instructions(arr);
 
-	// collapse_instructions(arr, opts);
-	// purge_instructions(arr);
+	collapse_instructions(arr, opts);
+	purge_instructions(arr);
 
 	// put extra algorithm-specific optimizers here, before loop_optimizer
 
-	// loop_optimizer(arr, opts);
-	// purge_instructions(arr);
+	loop_optimizer(arr, opts);
+	purge_instructions(arr);
 }
 
 static void check_comments(char instr, char next_instr, _Bool *is_comm,
@@ -463,6 +463,10 @@ int compile_brainfuck(struct __array *assembly_str, const int fd,
 		if (instr.corrosponding_open != NULL) {
 			instr.loop_index = instr.corrosponding_open->loop_index;
 		}
+
+		// ensure it does not get used because array functions
+		// may realloc()
+		instr.corrosponding_open = NULL;
 
 		const char *_instr_data = (const char *)(&instr);
 

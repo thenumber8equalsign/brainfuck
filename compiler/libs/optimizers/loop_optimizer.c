@@ -69,7 +69,9 @@ static void loop_helper(size_t i, struct __array *arr,
 	// get an array of type struct loop_piece
 	// which will represent how many increments each offset gets
 	// we move to each and every cell
-	// we then
+	// we then add (# increments * control_value)
+	// or subtract (# decrements * control_value)
+	// and zero the control cell
 }
 
 void loop_optimizer(struct __array *arr, const struct compiler_options *opts)
@@ -77,6 +79,7 @@ void loop_optimizer(struct __array *arr, const struct compiler_options *opts)
 	for (size_t i = 0; i < arr->length / sizeof(struct bf_instruction);) {
 		struct bf_instruction *instrs = (void *)arr->data;
 		if (instrs[i].instruction != '[') {
+			++i;
 			continue;
 		}
 		loop_helper(i, arr, opts);
