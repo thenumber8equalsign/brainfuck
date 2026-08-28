@@ -1,31 +1,39 @@
-export CC = gcc
+.PHONY: all clean _lib _build_dir
+
+export CC := gcc
 
 COMMON_FLAGS := -O2
 # uncomment to include the assert() sanity checks
-#COMMON_FLAGS := $(COMMON_FLAGS) -D DEBUG
+COMMON_FLAGS := $(COMMON_FLAGS) -DDEBUG
 
 # uncomment to check for memory leaks
 # after running the executable, check memory usage using preferred method
 #COMMON_FLAGS := $(COMMON_FLAGS) -D TEST_MEMORY_LEAKS
 
 export COMMON_FLAGS
-export CFLAGS = $(COMMON_FLAGS)
+export CFLAGS := $(COMMON_FLAGS) -std=c99
 
-export INCLUDE = $(abspath ./include/)
-export BUILD_DIR = $(abspath ./build/)
+export INCLUDE := $(abspath ./include/)
+export BUILD_DIR := $(abspath ./build/)
+export RULES := $(abspath ./make_rule.mk)
 
-all: lib compiler
+EXECUTABLE := $(BUILD_DIR)/compiler
 
-compiler: lib build_dir
-	$(CC) -c main.c -o $(BUILD_DIR)/main.o $(CFLAGS) -I $(INCLUDE)
+include $(RULES)
 
-	$(CC) $(BUILD_DIR)/*.o -o $(BUILD_DIR)/compiler
-
-lib: build_dir
-	make -C libs
+all: _build_dir _lib $(BUILD_DIR)/main.c.o
+	$(CC) $(BUILD_DIR)/*.o -o $(EXECUTABLE)
 
 clean:
 	rm -r $(BUILD_DIR)
 
-build_dir:
-	mkdir -p $(BUILD_DIR)
+_lib:
+	$(MAKE) -C libs/ all
+
+_build_dir:
+	@if (! [[ -d "$(BUILD_DIR)" ]]) && [[ -e "$(BUILD_DIR)" ]]; then \
+		echo "$(BUILD_DIR) exist and is not a directory"; \
+		exit 1; \
+	elif (! [[ -e "$(BUILD_DIR)" ]]); then \
+		mkdir -p $(BUILD_DIR); \
+	fi
