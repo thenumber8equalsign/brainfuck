@@ -1,6 +1,7 @@
 #include <config.h>
 #include <arrays.h>
 #include <stdlib.h>
+#include <string.h>
 
 // the data is terminated with a 0 byte
 // all capacities include the null terminator
@@ -138,5 +139,51 @@ int array_shrink_to_fit(struct __array *arr)
 
 	arr->capacity = arr->length + 1;
 	arr->data = ptr;
+	return 0;
+}
+
+/**
+ * array_insert() - insert data into an array
+ * @arr: the array
+ * @idx: the index to insert, such that data[0] because arr[idx]
+ * @data: the data to insert
+ * @len: the number of bytes from data to copy
+ */
+int array_insert(struct __array *arr, size_t idx, const char *data, size_t len)
+{
+	if (idx > arr->length) {
+		return 0;
+	}
+
+	struct __array auxiliary;
+	memset(&auxiliary, 0, sizeof(auxiliary));
+	if (array_init(&auxiliary) == -1) {
+		return -1;
+	}
+
+	if (array_reserve(&auxiliary, arr->length + len) == -1) {
+		array_free(&auxiliary);
+		return -1;
+	}
+
+	if (array_append_bulk(&auxiliary, arr->data, idx) == -1) {
+		array_free(&auxiliary);
+		return -1;
+	}
+
+	if (array_append_bulk(&auxiliary, data, len) == -1) {
+		array_free(&auxiliary);
+		return -1;
+	}
+
+	int ret;
+	ret = array_append_bulk(&auxiliary, arr->data + idx, arr->length - idx);
+	if (ret == -1) {
+		array_free(&auxiliary);
+		return -1;
+	}
+
+	array_free(arr);
+	memcpy(arr, &auxiliary, sizeof(auxiliary));
 	return 0;
 }

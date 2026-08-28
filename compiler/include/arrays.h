@@ -115,6 +115,19 @@ int array_pop_many(struct __array *arr, size_t num);
  */
 int array_shrink_to_fit(struct __array *arr);
 
+/**
+ * array_insert() - insert data into an array
+ * @arr: the array
+ * @idx: the index to insert, such that data[0] because arr[idx]
+ * @data: the data to insert
+ * @len: the number of bytes from data to copy
+ *
+ * if idx > arr->length, nothing happens and success is returned
+ *
+ * Return: 0 on success, -1 on library error, and errno will be set
+ */
+int array_insert(struct __array *arr, size_t idx, const char *data, size_t len);
+
 #ifdef __cplusplus
 }
 #endif
