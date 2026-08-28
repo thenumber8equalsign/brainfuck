@@ -1,3 +1,4 @@
+#include <config.h>
 #include <compiler.h>
 #include <errno.h>
 #include <fcntl.h>

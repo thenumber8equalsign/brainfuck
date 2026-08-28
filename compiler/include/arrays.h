@@ -1,6 +1,7 @@
 #ifndef ARRAYS_H
 #define ARRAYS_H
 
+#include <config.h>
 #include <stddef.h>
 #include <stdint.h>
 

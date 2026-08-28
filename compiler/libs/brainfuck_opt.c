@@ -1,5 +1,6 @@
-// brainfuck_opt.c: very simple optimizers
+// brainfuck_opt.c: simple optimizers
 // other more complex optimizers can be found in compiler/libs/optimizers
+#include <config.h>
 #include <stdio.h>
 #include <string.h>
 #include <err.h>

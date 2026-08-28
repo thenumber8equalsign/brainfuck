@@ -1,3 +1,4 @@
+#include <config.h>
 #include <brainfuck.h>
 #include <arrays.h>
 #include <err.h>

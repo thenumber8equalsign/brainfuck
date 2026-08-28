@@ -1,6 +1,7 @@
 #ifndef MAIN_HELPERS_H
 #define MAIN_HELPERS_H
 
+#include <config.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <brainfuck.h>

@@ -1,3 +1,4 @@
+#include <config.h>
 #include <arrays.h>
 #include <stdlib.h>
 

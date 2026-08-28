@@ -7,6 +7,7 @@
 
 #define ARRAY_SIZE 30000
 
+#include <config.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <stdbool.h>

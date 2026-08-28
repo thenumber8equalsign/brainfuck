@@ -1,5 +1,4 @@
-// Brainfuck compiler for linux AMD64
-#include <arrays.h>
+#include <config.h>
 #include <assert.h>
 #include <limits.h>
 #include <stdlib.h>
@@ -14,6 +13,7 @@
 
 #include <brainfuck.h>
 #include <brainfuck_opt.h>
+#include <arrays.h>
 
 #define TWO_32 (1ULL << 32)
 

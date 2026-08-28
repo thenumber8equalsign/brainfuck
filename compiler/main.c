@@ -1,4 +1,5 @@
 // Brainfuck compiler for linux AMD64
+#include <config.h>
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,6 +17,11 @@
 
 int main(int argc, char **argv)
 {
+
+	printf("posix: %lu\n", _POSIX_C_SOURCE);
+	return 1;
+
+
 	// ensure 64 bit
 	assert(sizeof(long) == 8);
 	assert(sizeof(size_t) == sizeof(long));

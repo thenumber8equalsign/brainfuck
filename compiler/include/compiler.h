@@ -1,6 +1,7 @@
 #ifndef COMPILER_H
 #define COMPILER_H
 
+#include <config.h>
 #include <stdbool.h>
 
 #ifdef __cplusplus

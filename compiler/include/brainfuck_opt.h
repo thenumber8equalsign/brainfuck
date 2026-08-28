@@ -1,6 +1,7 @@
 #ifndef BRAINFUCK_OPT_H
 #define BRAINFUCK_OPT_H
 
+#include <config.h>
 #include <stddef.h>
 
 #include <brainfuck.h>

@@ -1,7 +1,9 @@
+#include <config.h>
 #include <stdio.h>
 #include <string.h>
 #include <err.h>
 #include <brainfuck_opt.h>
+#include <assert.h>
 
 static _Bool is_pointer_instruction(const struct bf_instruction *instr)
 {
