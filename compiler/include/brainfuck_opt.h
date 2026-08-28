@@ -9,6 +9,37 @@
 extern "C" {
 #endif
 
+/**
+ * get_signed_repetitions() - get the signed repetitions for a <>+- instruction
+ * @instr: the bf_instruction to get signed repetitions from
+ * @result: where to put the result, if the functions succeeds
+ *
+ * This function will attempt to get the signed repetitions from a
+ * bf_instruction. That is, -repetitions if instr is deemed to be a "negative"
+ * instruction, and repetitions if instr is deemed to be a "positive"
+ * instruction.
+ * + and > are classified as "positive" instructions
+ * - and < are deemed as "negative" instructions
+ *
+ * Return: 0 indicates that instr->instruction was a valid instruction +-<>
+ * 	-1 indicates that instr->instruction was not a valid instruction
+ */
+static inline int get_signed_repetitions(const struct bf_instruction *instr,
+					 ssize_t *result)
+{
+	const char in = instr->instruction;
+
+	if (in == '<' || in == '-') {
+		*result = -instr->repetitions;
+		return 0;
+	} else if (in == '>' || in == '+') {
+		*result = instr->repetitions;
+		return 0;
+	}
+
+	return -1;
+}
+
 // The following instructions are used to optimize the brainfuck code
 // Note: one must collapse instructions first, as other functions
 // depend on this happening,
@@ -75,6 +106,20 @@ void optimize_zero_cell(size_t len, struct bf_instruction instrs[static len],
 void optimize_square_algorithm(size_t len,
 			       struct bf_instruction instrs[static len],
 			       const struct compiler_options *opts);
+
+/**
+ * loop_optimizer() - general loop optimizer
+ * @len: current length of the instrs array
+ * @instrs: the bf_instruction array representing the program
+ * @opts: compiler options
+ *
+ * This will optimize away loops in the form
+ * [(move)(inc/dec)(repeat)(to_control)(dec)]
+ * as those will add a multiple of the control to the cells
+ *
+ */
+void loop_optimizer(size_t len, struct bf_instruction instrs[static len],
+		    const struct compiler_options *opts);
 
 #ifdef __cplusplus
 }

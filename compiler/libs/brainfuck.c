@@ -307,8 +307,20 @@ static size_t optimize_brainfuck(size_t len, struct bf_instruction *instrs,
 	// Whenever i comment this out and set cell size to 8
 
 	// After fixing my broken brainfuck code, this is no longer needed
+	// but still better because there still may be repeated instructions
 	collapse_instructions(len, instrs, opts);
 	len = purge_instructions(len, instrs);
+#ifdef DEBUG
+	for (size_t i = 0; i < len; ++i) {
+		assert(instrs[i].repetitions != 0);
+	}
+#endif
+
+	// put extra algorithm-specific optimizers here, before loop_optimizer
+
+	loop_optimizer(len, instrs, opts);
+	len = purge_instructions(len, instrs);
+
 #ifdef DEBUG
 	for (size_t i = 0; i < len; ++i) {
 		assert(instrs[i].repetitions != 0);

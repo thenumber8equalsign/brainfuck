@@ -7,3 +7,4 @@ target:
 		-I $(INCLUDE)
 	$(CC) -c brainfuck_strip.c -o $(BUILD_DIR)/brainfuck_strip.o $(CFLAGS) \
 		-I $(INCLUDE)
+	make -C optimizers

@@ -25,7 +25,6 @@ lib: build_dir
 	make -C libs
 
 clean:
-	make -C libs clean
 	rm -r $(BUILD_DIR)
 
 build_dir:
