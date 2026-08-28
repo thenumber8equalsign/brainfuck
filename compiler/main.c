@@ -17,11 +17,6 @@
 
 int main(int argc, char **argv)
 {
-
-	printf("posix: %lu\n", _POSIX_C_SOURCE);
-	return 1;
-
-
 	// ensure 64 bit
 	assert(sizeof(long) == 8);
 	assert(sizeof(size_t) == sizeof(long));
