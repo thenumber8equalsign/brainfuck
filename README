@@ -1,4 +1,4 @@
-an optimizing brainfuck compiler for Linux AMD64, (and cross-platform interpreter)
+an optimizing brainfuck compiler for Linux AMD64, and cross-platform interpreter
 
 there is a compiler located at compiler/
 It is very fast,
