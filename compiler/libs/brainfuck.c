@@ -294,22 +294,55 @@ static _Bool is_bf_instruction(char instruction)
 static void optimize_brainfuck(struct __array *arr,
 			       const struct compiler_options *opts)
 {
+#if defined(OPTIMIZE_LEN) || defined(OPTIMIZE_SANITY_CHECK)
+#error "macros already defined"
+#endif
+
+#ifdef DEBUG
+#define OPTIMIZE_LEN arr->length / sizeof(struct bf_instruction)
+#define OPTIMIZE_SANITY_CHECK()                               \
+	for (size_t i = 0; i < OPTIMIZE_LEN; ++i) {           \
+		struct bf_instruction *a = (void *)arr->data; \
+		assert(a[i].repetitions != 0);                \
+	}
+#endif // #ifdef DEBUG
+
 	collapse_instructions(arr);
 	purge_instructions(arr);
+#ifdef DEBUG
+	OPTIMIZE_SANITY_CHECK()
+#endif
 
 	remove_opposite_instructions(arr);
 	purge_instructions(arr);
+#ifdef DEBUG
+	OPTIMIZE_SANITY_CHECK()
+#endif
 
 	optimize_zero_cell(arr);
 	purge_instructions(arr);
+#ifdef DEBUG
+	OPTIMIZE_SANITY_CHECK()
+#endif
 
 	optimize_square_algorithm(arr, opts);
 	collapse_remove_and_purge(arr);
+#ifdef DEBUG
+	OPTIMIZE_SANITY_CHECK()
+#endif
 
 	// put extra algorithm-specific optimizers here, before loop_optimizer
 
 	loop_optimizer(arr, opts);
-	purge_instructions(arr);
+	collapse_remove_and_purge(arr);
+#ifdef DEBUG
+	OPTIMIZE_SANITY_CHECK()
+#endif
+
+#ifdef DEBUG
+#undef OPTIMIZE_LEN
+#undef OPTIMIZE_SANITY_CHECK
+#endif // #ifdef DEBUG
 }
 
 static void check_comments(char instr, char next_instr, _Bool *is_comm,
