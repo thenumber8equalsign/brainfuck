@@ -27,7 +27,3 @@ to optimize simple loops like
 [(move)(inc/dec)(repeat on a different cell)(return to a control and decrement)]
 
 TODO: re-add the sanity checks in optimize_brainfuck in brainfuck.c
-
-TODO: array_insert uses an auxiliary array. Yes, I know it is possible to do
-things without an auxiliary array, however, when I wrote this, I was very tired
-and was too lazy.

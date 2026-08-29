@@ -16,4 +16,13 @@
 #define _DEFAULT_SOURCE
 #include <features.h>
 
+// uncomment to include all the sanity checks to prevent unexpected errors
+#define DEBUG
+
+// uncomment to run an infinite loop in main() that repeatedly calls the
+// compile_brainfuck() function to read from the brainfuck file and convert it
+// to assembly. with this you can check memory usage while it is running
+// to check for memory leaks
+//#define TEST_MEMORY_LEAKS
+
 #endif

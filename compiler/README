@@ -1,6 +1,9 @@
 This is the brainfuck compiler.
 the main() function is defined in main.c
 
+you can include or exclude the sanity checks with assert()
+by undefining the DEBUG macro in include/config.h
+
 functions for parsing brainfuck and generating assembly
 are at include/brainfuck.h
 and libs/brainfuck.c for their implementations

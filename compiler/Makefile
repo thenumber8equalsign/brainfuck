@@ -3,12 +3,6 @@
 export CC := gcc
 
 COMMON_FLAGS := -O2
-# uncomment to include the assert() sanity checks
-COMMON_FLAGS := $(COMMON_FLAGS) -DDEBUG
-
-# uncomment to check for memory leaks
-# after running the executable, check memory usage using preferred method
-#COMMON_FLAGS := $(COMMON_FLAGS) -D TEST_MEMORY_LEAKS
 
 export COMMON_FLAGS
 export CFLAGS := $(COMMON_FLAGS) -std=c99
