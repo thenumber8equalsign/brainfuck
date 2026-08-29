@@ -218,6 +218,7 @@ static void opt_square_alg_helper(size_t i, struct bf_instruction *instrs,
 		instrs[i + 3].assembly.data = NULL;
 		return;
 	}
+	instrs[i + 4].instruction = 0;
 
 	instrs[i].instruction = 'z';
 	instrs[i].repetitions = 1;
