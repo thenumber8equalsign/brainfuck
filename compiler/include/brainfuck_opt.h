@@ -72,41 +72,49 @@ void purge_instructions(struct __array *arr);
 /**
  * collapse_instructions() - collapse repeated -+<>
  * @arr: the array of struct bf_instruction
- * @opts: compiler options
  *
  * Return: None
  */
-void collapse_instructions(struct __array *arr,
-			   const struct compiler_options *opts);
+void collapse_instructions(struct __array *arr);
 
 /**
  * remove_opposite_instructions() - collapse repeated opposite instructions
  * @arr: the array of struct bf_instruction
- * @opts: compiler options
  *
  * Note: collapse_instructions() may have to be called first
  *
  * Return: None
  */
-void remove_opposite_instructions(struct __array *arr,
-				  const struct compiler_options *opts);
+void remove_opposite_instructions(struct __array *arr);
+
+/**
+ * collapse_remove_and_purge() - auxiliary helper to call the above 3 functions
+ * @arr: the array of struct bf_instruction
+ *
+ * this function will call purge_instructions(),
+ * collapse_instructions(), and remove_opposite_instructions()
+ * on the array of bf_instruction
+ *
+ * Return: None
+ */
+void collapse_remove_and_purge(struct __array *arr);
 
 /**
  * zero_cell() - optimize [-] and [+] to a zero instruction
  * @arr: the array of struct bf_instruction
- * @opts: compiler options
  *
  * Return: None
  */
-void optimize_zero_cell(struct __array *arr,
-			const struct compiler_options *opts);
+void optimize_zero_cell(struct __array *arr);
 
 /**
  * square_algorithm() - optimize the squaring algorithm
  * @arr: the array of struct bf_instruction
  * @opts: compiler options
  *
- * Note: a call to collapse_instructions may be necessary after calling this
+ * a call to collapse_instructions and remove_opposite_instructions
+ * may be necessary after this
+ *
  *
  * Return: None
  */

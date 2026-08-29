@@ -1,0 +1,36 @@
+This is the brainfuck compiler.
+the main() function is defined in main.c
+
+functions for parsing brainfuck and generating assembly
+are at include/brainfuck.h
+and libs/brainfuck.c for their implementations
+
+the functions for printing the help menu and parsing command line arguments
+are located at include/main_helpers.h
+and libs/helpers.c for their implementations
+
+the code that spawns child processes that assembles, and links the assembly
+is located at include/compiler.h
+and libs/compiler.c for their implementations
+
+the brainfuck optimizer is located at include/brainfuck_opt.h
+and libs/brainfuck_opt.c for the implementations of simple optimizers,
+and libs/optimizers/ for the implementations of more complex optimizers
+
+the resizing arrays are located at include/arrays.h
+and libs/arrays.c for the implementations
+
+I have made it somewhat simple to add your own algorithm-specific optimizers,
+for an example with the square algorithm you can see
+libs/optimizers/square_alg.c
+after making functions to detect, and replace the algorithm with custom
+assembly, you can then call them from the optimize_brainfuck() function
+in the libs/brainfuck.c source file.
+Remember to call purge_instructions(), collapse_instructions(),
+purge_instructions() again, remove_opposite_instructions(), and
+purge_instructions() again,
+an auxilery helper is provided to call all of those functions,
+it is called collapse_remove_and_purge()
+
+Documentation may not be attached with the implementation of a function,
+but should be attached to the declaration in the header file for the function

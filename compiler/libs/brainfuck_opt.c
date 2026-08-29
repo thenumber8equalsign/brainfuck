@@ -16,7 +16,7 @@
 void purge_instructions(struct __array *arr)
 {
 	size_t len = arr->length / sizeof(struct bf_instruction);
-	struct bf_instruction *instrs = (struct bf_instruction *)arr->data;
+	struct bf_instruction *instrs = (void *)arr->data;
 	for (size_t i = 0; i < len;) {
 		const _Bool val = instrs[i].repetitions == 0;
 
@@ -45,11 +45,10 @@ static _Bool is_opposite_instruction(char a, char b)
 	       (a == '-' && b == '+') || (a == '>' && b == '<');
 }
 
-void collapse_instructions(struct __array *arr,
-			   const struct compiler_options *opts)
+void collapse_instructions(struct __array *arr)
 {
 	size_t len = arr->length / sizeof(struct bf_instruction);
-	struct bf_instruction *instrs = (struct bf_instruction *)arr->data;
+	struct bf_instruction *instrs = (void *)arr->data;
 	for (size_t i = 1; i < len; ++i) {
 		const char prev = instrs[i - 1].instruction;
 		const char cur = instrs[i].instruction;
@@ -67,8 +66,7 @@ void collapse_instructions(struct __array *arr,
 	}
 }
 
-void remove_opposite_instructions(struct __array *arr,
-				  const struct compiler_options *opts)
+void remove_opposite_instructions(struct __array *arr)
 {
 	size_t len = arr->length / sizeof(struct bf_instruction);
 	struct bf_instruction *instrs = (void *)arr->data;
@@ -96,8 +94,7 @@ void remove_opposite_instructions(struct __array *arr,
 	}
 }
 
-void optimize_zero_cell(struct __array *arr,
-			const struct compiler_options *opts)
+void optimize_zero_cell(struct __array *arr)
 {
 	size_t len = arr->length / sizeof(struct bf_instruction);
 	struct bf_instruction *instrs = (void *)arr->data;
@@ -125,4 +122,15 @@ void optimize_zero_cell(struct __array *arr,
 			i += 2;
 		}
 	}
+}
+
+void collapse_remove_and_purge(struct __array *arr)
+{
+	purge_instructions(arr);
+
+	collapse_instructions(arr);
+	purge_instructions(arr);
+
+	remove_opposite_instructions(arr);
+	purge_instructions(arr);
 }

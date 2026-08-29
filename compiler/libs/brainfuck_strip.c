@@ -13,11 +13,7 @@ int output_brainfuck(struct __array *output, struct __array *arr,
 	const size_t wrap = opts->wrap_width;
 	int ret = 0;
 
-	collapse_instructions(arr, opts);
-	purge_instructions(arr);
-
-	remove_opposite_instructions(arr, opts);
-	purge_instructions(arr);
+	collapse_remove_and_purge(arr);
 
 	size_t len = arr->length / sizeof(struct bf_instruction);
 

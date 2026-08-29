@@ -294,20 +294,17 @@ static _Bool is_bf_instruction(char instruction)
 static void optimize_brainfuck(struct __array *arr,
 			       const struct compiler_options *opts)
 {
-	collapse_instructions(arr, opts);
+	collapse_instructions(arr);
 	purge_instructions(arr);
 
-	remove_opposite_instructions(arr, opts);
+	remove_opposite_instructions(arr);
 	purge_instructions(arr);
 
-	optimize_zero_cell(arr, opts);
+	optimize_zero_cell(arr);
 	purge_instructions(arr);
 
 	optimize_square_algorithm(arr, opts);
-	purge_instructions(arr);
-
-	collapse_instructions(arr, opts);
-	purge_instructions(arr);
+	collapse_remove_and_purge(arr);
 
 	// put extra algorithm-specific optimizers here, before loop_optimizer
 
@@ -481,7 +478,7 @@ int compile_brainfuck(struct __array *assembly_str, const int fd,
 		++i;
 	}
 
-	instr_data = (struct bf_instruction *)instructions.data;
+	instr_data = (void *)instructions.data;
 	instr_len = instructions.length / sizeof(struct bf_instruction);
 	ret = validate_brainfuck(instr_len, instr_data, &fail);
 	if (ret != 0) {
@@ -531,7 +528,7 @@ int compile_brainfuck(struct __array *assembly_str, const int fd,
 		if (instr_data[i].repetitions == 0)
 			continue;
 
-		char buf[1024];
+		char buf[4096];
 		instruction_to_assembly(&instr_data[i], buf, options);
 
 		ret = array_append_bulk(assembly_str, buf, strlen(buf));
