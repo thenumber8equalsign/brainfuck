@@ -186,9 +186,9 @@ static int opt_square_alg_helper(size_t i, struct bf_instruction *instrs,
 	get_word_and_multiplier(&word, &multiplier, &reg, NULL, NULL, opts);
 
 	// generate assembly first (in case array stuff fails)
-	const char *fmt = "\tmov	%1$s, %2$s ptr [rbx+r12%3$s]\n"
-			  "\tmul	%2$s ptr [rbx+r12%3$s]\n"
-			  "\tmov	%2$s ptr [rbx+r12%3$s], %1$s\n";
+	const char *fmt = "\tmov	%1$s, %2$s PTR [rbx+r12%3$s]\n"
+			  "\tmul	%2$s PTR [rbx+r12%3$s]\n"
+			  "\tmov	%2$s PTR [rbx+r12%3$s], %1$s\n";
 	char buf[4096];
 	snprintf(buf, sizeof(buf), fmt, reg, word, multiplier);
 

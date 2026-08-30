@@ -41,7 +41,7 @@ static void instruction_to_assembly(const struct bf_instruction *instruction,
 		return;
 	}
 
-	const char *word = "byte";
+	const char *word = "BYTE";
 	const char *multiplier = "";
 	// extra stuff for ensuring that write/read actually prints/read
 	// the proper pointed to value
@@ -53,35 +53,35 @@ static void instruction_to_assembly(const struct bf_instruction *instruction,
 
 	switch (options->cell_width) {
 	case 1:
-		word = "byte";
+		word = "BYTE";
 		multiplier = "";
 		extra_write = "";
 		extra_read = "";
 		modulo = 1ULL << 8;
 		break;
 	case 2:
-		word = "word";
+		word = "WORD";
 		multiplier = "*2";
 		modulo = 1ULL << 16;
-		extra_write = "\tlea\trdi, qword ptr [rdi*2]\n";
-		extra_read = "\tmov\tword ptr [rbx+r12*2], 0\n"
-			     "\tlea\trdi, qword ptr [rdi*2]\n";
+		extra_write = "\tlea\trdi, QWORD PTR [rdi*2]\n";
+		extra_read = "\tmov\tWORD PTR [rbx+r12*2], 0\n"
+			     "\tlea\trdi, QWORD PTR [rdi*2]\n";
 		break;
 	case 4:
-		word = "dword";
+		word = "DWORD";
 		multiplier = "*4";
 		modulo = 1ULL << 32;
-		extra_write = "\tlea\trdi, qword ptr [rdi*4]\n";
-		extra_read = "\tmov\tdword ptr [rbx+r12*4], 0\n"
-			     "\tlea\trdi, qword ptr [rdi*4]\n";
+		extra_write = "\tlea\trdi, QWORD PTR [rdi*4]\n";
+		extra_read = "\tmov\tDWORD PTR [rbx+r12*4], 0\n"
+			     "\tlea\trdi, QWORD PTR [rdi*4]\n";
 		break;
 	case 8:
-		word = "qword";
+		word = "QWORD";
 		multiplier = "*8";
 		modulo = 0; // qwords will always be modulo 2^64
-		extra_write = "\tlea\trdi, qword ptr [rdi*8]\n";
-		extra_read = "\tmov\tqword ptr [rbx+r12*8], 0\n"
-			     "\tlea\trdi, qword ptr [rdi*8]\n";
+		extra_write = "\tlea\trdi, QWORD PTR [rdi*8]\n";
+		extra_read = "\tmov\tQWORD PTR [rbx+r12*8], 0\n"
+			     "\tlea\trdi, QWORD PTR [rdi*8]\n";
 		break;
 	default:
 		break;
@@ -103,12 +103,12 @@ static void instruction_to_assembly(const struct bf_instruction *instruction,
 		// make sure we generate assembly the ISA actually supports
 		if (rep % TWO_32 != rep) {
 			const char *format = "\tmov\trdi, %zd\n"
-					     "\tadd\t%s ptr [rbx+r12%s], rdi\n";
+					     "\tadd\t%s PTR [rbx+r12%s], rdi\n";
 			sprintf(str, format, rep, word, multiplier);
 			return;
 		}
 
-		const char *format = "\tadd	%s ptr [rbx+r12%s], %zd\n";
+		const char *format = "\tadd	%s PTR [rbx+r12%s], %zd\n";
 		sprintf(str, format, word, multiplier, rep);
 		return;
 	}
@@ -116,12 +116,12 @@ static void instruction_to_assembly(const struct bf_instruction *instruction,
 	if (instruction->instruction == '-') {
 		if (rep % TWO_32 != rep) {
 			const char *format = "\tmov\trdi, %zd\n"
-					     "\tsub\t%s ptr [rbx+r12%s], rdi\n";
+					     "\tsub\t%s PTR [rbx+r12%s], rdi\n";
 			sprintf(str, format, rep, word, multiplier);
 			return;
 		}
 
-		const char *format = "\tsub	%s ptr [rbx+r12%s], %zd\n";
+		const char *format = "\tsub	%s PTR [rbx+r12%s], %zd\n";
 		sprintf(str, format, word, multiplier, rep);
 		return;
 	}
@@ -167,7 +167,7 @@ static void instruction_to_assembly(const struct bf_instruction *instruction,
 	}
 
 	if (instruction->instruction == '[') {
-		const char *format = "\tcmp	%s ptr [rbx+r12%s], 0\n"
+		const char *format = "\tcmp	%s PTR [rbx+r12%s], 0\n"
 				     "\tjz	END_LOOP_%zu\n"
 				     "BEGIN_LOOP_%zu:\n";
 		sprintf(str, format, word, multiplier, instruction->loop_index,
@@ -177,7 +177,7 @@ static void instruction_to_assembly(const struct bf_instruction *instruction,
 	}
 
 	if (instruction->instruction == ']') {
-		const char *format = "\tcmp	%s ptr [rbx+r12%s], 0\n"
+		const char *format = "\tcmp	%s PTR [rbx+r12%s], 0\n"
 				     "\tjnz	BEGIN_LOOP_%zu\n"
 				     "END_LOOP_%zu:\n";
 		sprintf(str, format, word, multiplier, instruction->loop_index,
@@ -204,7 +204,7 @@ static void instruction_to_assembly(const struct bf_instruction *instruction,
 	}
 
 	if (instruction->instruction == 'z') {
-		const char *format = "\tmov	%s ptr [rbx+r12%s], 0\n";
+		const char *format = "\tmov	%s PTR [rbx+r12%s], 0\n";
 		sprintf(str, format, word, multiplier);
 		return;
 	}

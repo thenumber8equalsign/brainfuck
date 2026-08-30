@@ -8,6 +8,7 @@
 #define ARRAY_SIZE 30000
 
 #include <config.h>
+#include <sys/syscall.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <stdbool.h>
@@ -275,12 +276,12 @@ static const char *assembly_begin =
 	// PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0)
 	// also, according to man 2 mmap, with MAP_ANON, the mapping's contents
 	// are initialized to zero, so no initialization is needed
-	"	mov	rax, 9\n"
+	"	mov	rax, " STR(SYS_mmap) "\n"
 	"	xor	edi, edi\n"
-	"	mov	rsi, qword ptr [rip + array_size]\n"
+	"	mov	rsi, QWORD PTR [rip + array_size]\n"
 	// we need to multiply based on if we are using 1 byte cells,
 	// or 2 byte cells, or etc
-	"	lea	rsi, qword ptr [rsi%s]\n"
+	"	lea	rsi, QWORD PTR [rsi%s]\n"
 	"	mov	rdx, 0x3\n"
 	"	mov	r10, 0x22\n"
 	"	mov	r8, -1\n"
@@ -289,19 +290,20 @@ static const char *assembly_begin =
 	"	cmp	rax, 0\n"
 	"	jg	do_code\n"
 	"error:\n"
-	"	mov	rax, 1\n"
-	"	mov	rdi, 1\n"
-	"	lea	rsi, [rip + error_message]\n"
+	// all of a program's mapped memory gets unmapped upon termination
+	"	mov	rax, " STR(SYS_write) "\n"
+	"	mov	rdi, " STR(STDERR_FILENO) "\n"
+	"	lea	rsi, QWORD PTR [rip + error_message]\n"
 	"	mov	rdx, error_message_len\n"
 	"	syscall\n"
-	"	mov	rax, 60\n"
+	"	mov	rax, " STR(SYS_exit) "\n"
 	"	mov	rdi, 1\n"
 	"	syscall\n"
 	"do_code:\n"
 	"	push	rbp\n"
 	"	mov	rbp, rsp\n"
 	"	sub	rsp, 64\n"
-	"	mov	qword ptr [rbp-8], rax\n"
+	"	mov	QWORD PTR [rbp-8], rax\n"
 	"	mov	rbx, rax\n"
 	"	xor	r12d, r12d\n"
 	;
@@ -311,10 +313,10 @@ static const char *assembly_begin =
 
 // this is to follow the generated code
 static const char *assembly_end =
-	"	mov	rax, 11\n"
-	"	mov	rdi, qword [rbp-8]\n"
-	"	mov	rsi, qword ptr [rip + array_size]\n"
-	"	lea	rsi, qword ptr [rsi%s]\n"
+	"	mov	rax, " STR(SYS_munmap) "\n"
+	"	mov	rdi, QWORD PTR [rbp-8]\n"
+	"	mov	rsi, QWORD PTR [rip + array_size]\n"
+	"	lea	rsi, QWORD PTR [rsi%s]\n"
 	"	syscall\n"
 	"	mov	rsp, rbp\n"
 	"	pop	rbp\n"
@@ -329,7 +331,7 @@ static const char *pointer_functions_wrap =
 	"	add	rdi, rsi\n"
 	"	mov	rax, rdi\n"
 	"	xor	edx, edx\n"
-	"	mov	rcx, qword ptr [rip + array_size]\n"
+	"	mov	rcx, QWORD PTR [rip + array_size]\n"
 	"	div	rcx\n" // rax = rdx:rax / arg, rdx = rdx:rax % arg
 	"	mov	rax, rdx\n"
 	"	ret\n"
@@ -340,7 +342,7 @@ static const char *pointer_functions_wrap =
 	// reduce amount modulo array size
 	"	xor	edx, edx\n"
 	"	mov	rax, rsi\n"
-	"	div	qword ptr [rip + array_size]\n"
+	"	div	QWORD PTR [rip + array_size]\n"
 	"	cmp	rdi, rdx\n"
 	"	jb	decrement_pointer_underflow\n"
 
@@ -349,20 +351,20 @@ static const char *pointer_functions_wrap =
 	"	ret\n"
 	"decrement_pointer_underflow:\n"
 	"	sub	rdx, rdi\n"
-	"	mov	rdi, qword ptr [rip + array_size]\n"
+	"	mov	rdi, QWORD PTR [rip + array_size]\n"
 	"	sub	rdi, rdx\n"
 	"	mov	rax, rdi\n"
 	"	ret\n"
 	;
 static const char *pointer_functions_abort =
 	"pointer_abort:\n"
-	"	mov	rax, 60\n"
+	"	mov	rax, " STR(SYS_exit) "\n"
 	"	mov	rdi, 43\n"
 	"	syscall\n"
 	// u64 increment_pointer(u64 ptr, u64 amount)
 	"increment_pointer:\n"
 	"	add	rdi, rsi\n"
-	"	cmp	rdi, qword ptr [rip + array_size]\n"
+	"	cmp	rdi, QWORD PTR [rip + array_size]\n"
 	"	jae	pointer_abort\n"
 	"	mov	rax, rdi\n"
 	"	ret\n"
@@ -370,7 +372,7 @@ static const char *pointer_functions_abort =
 	// u64 decrement_pointer(u64 ptr, u64 amount)
 	"decrement_pointer:\n"
 	"	sub	rdi, rsi\n"
-	"	cmp	rdi, qword ptr [rip + array_size]\n"
+	"	cmp	rdi, QWORD PTR [rip + array_size]\n"
 	"	jae	pointer_abort\n"
 	"	mov	rax, rdi\n"
 	"	ret\n"
@@ -379,8 +381,8 @@ static const char *read_write_functions =
 	// void do_write(u64 ptr, u64 buf_addr)
 	"do_write:\n"
 	"	add	rsi, rdi\n"
-	"	mov	rax, 1\n"
-	"	mov	rdi, 1\n"
+	"	mov	rax, " STR(SYS_write) "\n"
+	"	mov	rdi, " STR(STDOUT_FILENO) "\n"
 	"	mov	rdx, 1\n"
 	"	syscall\n"
 	"	ret\n"
@@ -389,25 +391,25 @@ static const char *read_write_functions =
 	"	push	rbp\n"
 	"	mov	rbp, rsp\n"
 	"	sub	rsp, 64\n"
-	"	mov	qword ptr [rbp-8], rsi\n"
-	"	add	qword ptr [rbp-8], rdi\n"
-	"	mov	qword ptr [rbp-16], 0\n" // this will be char ch;
+	"	mov	QWORD PTR [rbp-8], rsi\n"
+	"	add	QWORD PTR [rbp-8], rdi\n"
+	"	mov	QWORD PTR [rbp-16], 0\n" // this will be char ch;
 	// rbp-8: address of the array
 	// byte @ rbp-16: the temporary character
 	"do_read_loop:\n"
-	"	mov	rax, 0\n"
-	"	mov	rdi, 0\n"
-	"	lea	rsi, qword ptr [rbp-16]\n"
+	"	mov	rax, " STR(SYS_read) "\n"
+	"	mov	rdi, " STR(STDIN_FILENO) "\n"
+	"	lea	rsi, QWORD PTR [rbp-16]\n"
 	"	mov	rdx, 1\n"
 	"	syscall\n"
 
-	"	cmp	byte ptr [rbp-16], 0xa\n"
+	"	cmp	BYTE PTR [rbp-16], 0xa\n"
 	"	je	do_read_loop\n"
 
 	"do_read_loop_done:\n"
-	"	mov	rax, qword ptr [rbp-8]\n"
-	"	mov	dl, byte ptr [rbp-16]\n"
-	"	mov	byte ptr [rax], dl\n"
+	"	mov	rax, QWORD PTR [rbp-8]\n"
+	"	mov	dl, BYTE PTR [rbp-16]\n"
+	"	mov	BYTE PTR [rax], dl\n"
 	"	leave\n"
 	"	ret\n"
 	;
