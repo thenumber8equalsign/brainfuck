@@ -67,14 +67,14 @@ static void generate_square_algorithm(struct bf_instruction alg[static 32],
 
 // return true if it was optimized, false otherwise
 // we can assume instrs[i+31] is valid
-static void opt_square_alg_helper(size_t i, struct bf_instruction *instrs,
+static int opt_square_alg_helper(size_t i, struct bf_instruction *instrs,
 				  const struct compiler_options *opts)
 {
 	// ensure we are not messing with already generated assembly
 	for (size_t j = i; j < i + 32; ++j) {
 		if (instrs[j].assembly.data != NULL ||
 		    instrs[j].repetitions == 0) {
-			return;
+			return 0;
 		}
 	}
 
@@ -106,19 +106,19 @@ static void opt_square_alg_helper(size_t i, struct bf_instruction *instrs,
 	// and ensure first 4 instructions match
 
 	if (instrs[i].instruction != 'z') {
-		return;
+		return 0;
 	}
 
 	if (!is_pointer_instruction(&instrs[i + 1])) {
-		return;
+		return 0;
 	}
 
 	if (instrs[i + 2].instruction != 'z') {
-		return;
+		return 0;
 	}
 
 	if (!is_pointer_instruction(&instrs[i + 3])) {
-		return;
+		return 0;
 	}
 
 	get_signed_repetitions(&instrs[i + 1], &tmp0);
@@ -177,46 +177,30 @@ static void opt_square_alg_helper(size_t i, struct bf_instruction *instrs,
 	// generate assembly for instrs[i], and set all the other's repetitions
 	// to zero
 	if (!is_square_algorithm) {
-		return;
+		return 0;
 	}
 
 	const char *word;
 	const char *multiplier;
-	get_word_and_multiplier(&word, &multiplier, opts);
+	const char *reg;
+	get_word_and_multiplier(&word, &multiplier, &reg, NULL, NULL, opts);
 
 	// generate assembly first (in case array stuff fails)
 	const char *fmt = "\tmov	%1$s, %2$s ptr [rbx+r12%3$s]\n"
 			  "\tmul	%2$s ptr [rbx+r12%3$s]\n"
 			  "\tmov	%2$s ptr [rbx+r12%3$s], %1$s\n";
-	const char *reg;
-	char buf[1024];
-	switch (opts->cell_width) {
-	case 1:
-		reg = "al";
-		break;
-	case 2:
-		reg = "ax";
-		break;
-	case 4:
-		reg = "eax";
-		break;
-	case 8:
-		reg = "rax";
-		break;
-	}
+	char buf[4096];
 	snprintf(buf, sizeof(buf), fmt, reg, word, multiplier);
 
 	if (array_init(&instrs[i + 4].assembly) == -1) {
-		warn("array_init");
-		return;
+		return -1;
 	}
 
 	int ret = array_append_bulk(&instrs[i + 4].assembly, buf, strlen(buf));
 	if (ret == -1) {
-		warn("array_append_bulk");
 		array_free(&instrs[i + 3].assembly);
 		instrs[i + 3].assembly.data = NULL;
-		return;
+		return -1;
 	}
 	instrs[i + 4].instruction = 0;
 
@@ -251,14 +235,19 @@ static void opt_square_alg_helper(size_t i, struct bf_instruction *instrs,
 		instrs[j].repetitions = 0;
 		instrs[j].instruction = 0;
 	}
+	return 0;
 }
 
-void optimize_square_algorithm(struct __array *arr,
+int optimize_square_algorithm(struct __array *arr,
 			       const struct compiler_options *opts)
 {
 	size_t len = arr->length / sizeof(struct bf_instruction);
 	struct bf_instruction *instrs = (void *)arr->data;
 	for (size_t i = 0; i < len - 31 && len > 31; ++i) {
-		opt_square_alg_helper(i, instrs, opts);
+		if (opt_square_alg_helper(i, instrs, opts) == -1) {
+			warn("error when optimizing");
+			return -1;
+		}
 	}
+	return 0;
 }

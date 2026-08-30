@@ -161,32 +161,95 @@ int validate_brainfuck(size_t len,
  * 	based on compiler options
  * @word: this will be set to point to a string literal, either "QWORD", "BYTE",
  * 	"WORD", or "DWORD" depending on options
+ * 	it may be a null pointer
  * @multiplier: this will be set to point to a string literal, either "",
  * 	"*2", "*4", or "*8"
+ * 	it may be a null ptr
+ * @rax: one of "al", "ax", "eax", or "rax", depending on cell size
+ * 	it may be a null pointer
+ * @r13: same as rax, but with the r13 register
+ * @r14: same as rax, but with r14 register
  * @options: the compiler options
+ *
+ * Note: const char **x means x is a pointer to a pointer to a constant
+ * that means the characters of x can not be changed, but x and *x can be
+ * changed to point to something else
  *
  * Return: 0 indicates success, -1 indicates error
  */
 static inline int
 get_word_and_multiplier(const char **word, const char **multiplier,
+			const char **rax, const char **r13, const char **r14,
 			const struct compiler_options *options)
 {
 	switch (options->cell_width) {
 	case 1:
-		*word = "BYTE";
-		*multiplier = "";
+		if (word != NULL) {
+			*word = "BYTE";
+		}
+		if (multiplier != NULL) {
+			*multiplier = "";
+		}
+		if (rax != NULL) {
+			*rax = "al";
+		}
+		if (r13 != NULL) {
+			*r13 = "r13b";
+		}
+		if (r14 != NULL) {
+			*r14 = "r14b";
+		}
 		break;
 	case 2:
-		*word = "WORD";
-		*multiplier = "*2";
+		if (word != NULL) {
+			*word = "WORD";
+		}
+		if (multiplier != NULL) {
+			*multiplier = "*2";
+		}
+		if (rax != NULL) {
+			*rax = "ax";
+		}
+		if (r13 != NULL) {
+			*r13 = "r13w";
+		}
+		if (r14 != NULL) {
+			*r14 = "r14w";
+		}
 		break;
 	case 4:
-		*word = "DWORD";
-		*multiplier = "*4";
+		if (word != NULL) {
+			*word = "DWORD";
+		}
+		if (multiplier != NULL) {
+			*multiplier = "*4";
+		}
+		if (rax != NULL) {
+			*rax = "eax";
+		}
+		if (r13 != NULL) {
+			*r13 = "r13d";
+		}
+		if (r14 != NULL) {
+			*r14 = "r14d";
+		}
 		break;
 	case 8:
-		*word = "QWORD";
-		*multiplier = "*8";
+		if (word != NULL) {
+			*word = "QWORD";
+		}
+		if (multiplier != NULL) {
+			*multiplier = "*8";
+		}
+		if (rax != NULL) {
+			*rax = "rax";
+		}
+		if (r13 != NULL) {
+			*r13 = "r13";
+		}
+		if (r14 != NULL) {
+			*r14 = "r14";
+		}
 		break;
 	default:
 		return -1;

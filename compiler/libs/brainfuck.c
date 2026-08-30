@@ -291,8 +291,8 @@ static _Bool is_bf_instruction(char instruction)
 	return false;
 }
 
-static void optimize_brainfuck(struct __array *arr,
-			       const struct compiler_options *opts)
+static int optimize_brainfuck(struct __array *arr,
+			      const struct compiler_options *opts)
 {
 #if defined(OPTIMIZE_LEN) || defined(OPTIMIZE_SANITY_CHECK)
 #error "macros already defined"
@@ -325,7 +325,9 @@ static void optimize_brainfuck(struct __array *arr,
 	OPTIMIZE_SANITY_CHECK()
 #endif
 
-	optimize_square_algorithm(arr, opts);
+	if (optimize_square_algorithm(arr, opts) == -1) {
+		return -1;
+	}
 	collapse_remove_and_purge(arr);
 #ifdef DEBUG
 	OPTIMIZE_SANITY_CHECK()
@@ -333,7 +335,9 @@ static void optimize_brainfuck(struct __array *arr,
 
 	// put extra algorithm-specific optimizers here, before loop_optimizer
 
-	loop_optimizer(arr, opts);
+	if (loop_optimizer(arr, opts) == -1) {
+		return -1;
+	}
 	collapse_remove_and_purge(arr);
 #ifdef DEBUG
 	OPTIMIZE_SANITY_CHECK()
@@ -343,6 +347,8 @@ static void optimize_brainfuck(struct __array *arr,
 #undef OPTIMIZE_LEN
 #undef OPTIMIZE_SANITY_CHECK
 #endif // #ifdef DEBUG
+
+	return 0;
 }
 
 static void check_comments(char instr, char next_instr, _Bool *is_comm,
@@ -399,7 +405,7 @@ int compile_brainfuck(struct __array *assembly_str, const int fd,
 	const char *word = "";
 	size_t fail = 0;
 
-	get_word_and_multiplier(&word, &multiplier, options);
+	get_word_and_multiplier(&word, &multiplier, NULL, NULL, NULL, options);
 
 	ret = array_init(&instructions);
 	if (ret != 0) {
@@ -533,9 +539,14 @@ int compile_brainfuck(struct __array *assembly_str, const int fd,
 
 	// apply optimizations
 	if (options->optimize) {
-		optimize_brainfuck(&instructions, options);
+		ret = optimize_brainfuck(&instructions, options);
 		instr_len = instructions.length / sizeof(struct bf_instruction);
 		instr_data = (void *)instructions.data;
+	}
+
+	if (ret == -1) {
+		array_free(&instructions);
+		return -1;
 	}
 
 	// add on the multiplyer to assembly_begin, because mmap is in bytes

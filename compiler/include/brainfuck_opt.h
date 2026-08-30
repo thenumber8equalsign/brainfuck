@@ -115,10 +115,12 @@ void optimize_zero_cell(struct __array *arr);
  * a call to collapse_instructions and remove_opposite_instructions
  * may be necessary after this
  *
+ * on error, this function will call warn()
  *
- * Return: None
+ * Return: -1 indicates library error, and errno will be set,
+ * 	0 indicates success
  */
-void optimize_square_algorithm(struct __array *arr,
+int optimize_square_algorithm(struct __array *arr,
 			       const struct compiler_options *opts);
 
 /**
@@ -132,9 +134,12 @@ void optimize_square_algorithm(struct __array *arr,
  * at the start of the loop, the control should be the pointed-to value
  * in other words, the net displacement over the loop should be 0
  *
- * Return: None
+ * on error this function will call warn()
+ *
+ * Return: -1 indicates library error, and errno will be set,
+ * 	0 indicates success
  */
-void loop_optimizer(struct __array *arr, const struct compiler_options *opts);
+int loop_optimizer(struct __array *arr, const struct compiler_options *opts);
 
 #ifdef __cplusplus
 }
