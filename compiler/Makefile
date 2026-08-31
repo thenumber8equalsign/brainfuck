@@ -25,9 +25,9 @@ _lib:
 	$(MAKE) -C libs/ all
 
 _build_dir:
-	@if (! [[ -d "$(BUILD_DIR)" ]]) && [[ -e "$(BUILD_DIR)" ]]; then \
+	@if (! [ -d "$(BUILD_DIR)" ]) && [ -e "$(BUILD_DIR)" ]; then \
 		echo "$(BUILD_DIR) exist and is not a directory"; \
 		exit 1; \
-	elif (! [[ -e "$(BUILD_DIR)" ]]); then \
+	elif (! [ -e "$(BUILD_DIR)" ]); then \
 		mkdir -p $(BUILD_DIR); \
 	fi

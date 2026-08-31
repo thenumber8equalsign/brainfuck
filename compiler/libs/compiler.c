@@ -66,13 +66,19 @@ static int handle_child_process(const char *pathname,
 {
 	const char *executable_path = NULL;
 	if (assemble) {
-		executable_path = "/bin/as";
+		executable_path = "as";
 	} else {
-		executable_path = "/bin/ld";
+		executable_path = "ld";
 	}
 
-	execl(executable_path, executable_path, pathname, "-o", output_pathname,
-	      (char *)NULL);
+	execlp(executable_path, executable_path, "-o", output_pathname,
+	       pathname, (char *)NULL);
+	if (assemble && errno == ENOENT) {
+		// we may be running on another system without the GNU assembler
+		// now try clang
+		executable_path = "clang";
+		execlp("clang", "clang", "-o", output_pathname, pathname);
+	}
 	return 0;
 }
 
@@ -82,8 +88,7 @@ static int handle_child_process(const char *pathname,
  * @executable_pathname: the pathname for the final executable
  *
  * Context: this will create a child process to assemble and link the files,
- * and wait for those processes to complete, these processes will run /bin/as
- * and /bin/ld
+ * and wait for those processes to complete
  *
  * Return: 0 on success, -1 for library/system call error with errno being set,
  * any other nonzero value for another kind of error
