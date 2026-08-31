@@ -22,7 +22,7 @@ void print_help(bool use_stderr, const char *argv0)
 
 	// I stopped thinking how to name the options when i added -a
 	fprintf(stream,
-		"Usage: %s [-S] [-o output] [-O] [-h] [-B behavior]"
+		"Usage: %s [-S] [-o output] [-O level] [-h] [-B behavior]"
 		" [-c width] [-a comment_style] [-d width] "
 		"brainfuck_file\n\n",
 		argv0);
@@ -32,8 +32,16 @@ void print_help(bool use_stderr, const char *argv0)
 	fprintf(stream, "\t-o output\n\t\tspecify output file,"
 			" the default is ./a.out\n");
 
-	fprintf(stream, "\t-O\n\t\tapply simple optimizations,"
-			" the default being no optimizations\n");
+	fprintf(stream, "\t-O level\n\t\toptimization level, default 0\n"
+		"\t\t\t0: No optimizations\n"
+		"\t\t\t1: collapse repeated instruction, ++ becomes add 2\n"
+		"\t\t\t\tinstead of two add 1, and also delete <> and the likes"
+		"\n\t\t\t2: enable algorithm-specific optimizers, like [-]\n"
+		"\t\t\t\tzeroes the current cell\n"
+		"\t\t\t3: enable the general loop optimizer\n"
+		"\t\tenabling one of these implies all the lesser options\n"
+		"\t\tlike enabling the general loop optimizer enables\n"
+		"the algorithm specific, and the collapse instructions");
 
 	fprintf(stream,
 		"\t-B behavior\n\t\tbehavior of pointer overflow/underflow,\n");
@@ -100,9 +108,10 @@ int parse_options(int argc, char **argv, uint64_t *option_flags,
 	char *endptr = NULL;
 	const char *comm = "double";
 	const char *wrap_width_str = NULL;
+	const char *opt_str = "0";
 	options->strip_brainfuck = false;
 
-	while ((opt = getopt(argc, argv, "So:hOB:c:a:d:")) != -1) {
+	while ((opt = getopt(argc, argv, "So:hO:B:c:a:d:")) != -1) {
 		switch (opt) {
 		case 'S':
 			*option_flags |= FL_OUTPUT_ASSEMBLY;
@@ -114,7 +123,7 @@ int parse_options(int argc, char **argv, uint64_t *option_flags,
 			print_help(false, argv[0]);
 			exit(EXIT_SUCCESS);
 		case 'O':
-			options->optimize = true;
+			opt_str = optarg;
 			break;
 		case 'B':
 			pointer_behavior = optarg;
@@ -188,6 +197,16 @@ int parse_options(int argc, char **argv, uint64_t *option_flags,
 			print_help(true, argv[0]);
 			exit(EXIT_FAILURE);
 		}
+	}
+
+	options->optimization_level = strtoul(opt_str, &endptr, 10);
+	if (*endptr != 0) {
+		print_help(true, argv[0]);
+		exit(EXIT_FAILURE);
+	}
+	if (options->optimization_level > 3) {
+		print_help(true, argv[0]);
+		exit(EXIT_FAILURE);
 	}
 
 	return 0;

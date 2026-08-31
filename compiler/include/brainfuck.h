@@ -50,7 +50,8 @@ enum comment_behavior {
 
 /**
  * struct compiler_options - options for the brainfuck compiler
- * @optimize: apply simple optimizations, like compressing -+, and ><
+ * @optimization_level: optimization level, 0 for no optimization
+ * 	[0, 3]
  * @overflow: behavior on what to do when the pointer overflows
  * @cell_width: cell width, in bytes, should be one of 1, 2, 4, or 8
  * 	bad stuff may happen if this is not one of those
@@ -61,7 +62,7 @@ enum comment_behavior {
  * 	after this many characters
  */
 struct compiler_options {
-	_Bool optimize;
+	unsigned long optimization_level;
 	size_t cell_width;
 	enum pointer_behavior overflow;
 	enum comment_behavior comments;

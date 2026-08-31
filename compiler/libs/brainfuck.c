@@ -294,6 +294,9 @@ static _Bool is_bf_instruction(char instruction)
 static int optimize_brainfuck(struct __array *arr,
 			      const struct compiler_options *opts)
 {
+	if (opts->optimization_level == 0) {
+		return 0;
+	}
 #if defined(OPTIMIZE_LEN) || defined(OPTIMIZE_SANITY_CHECK)
 #error "macros already defined"
 #endif
@@ -319,6 +322,10 @@ static int optimize_brainfuck(struct __array *arr,
 	OPTIMIZE_SANITY_CHECK()
 #endif
 
+	if (opts->optimization_level < 2) {
+		return 0;
+	}
+
 	optimize_zero_cell(arr);
 	purge_instructions(arr);
 #ifdef DEBUG
@@ -332,6 +339,10 @@ static int optimize_brainfuck(struct __array *arr,
 #ifdef DEBUG
 	OPTIMIZE_SANITY_CHECK()
 #endif
+
+	if (opts->optimization_level < 3) {
+		return 0;
+	}
 
 	// put extra algorithm-specific optimizers here, before loop_optimizer
 
@@ -538,7 +549,7 @@ int compile_brainfuck(struct __array *assembly_str, const int fd,
 	}
 
 	// apply optimizations
-	if (options->optimize) {
+	if (options->optimization_level > 0) {
 		ret = optimize_brainfuck(&instructions, options);
 		instr_len = instructions.length / sizeof(struct bf_instruction);
 		instr_data = (void *)instructions.data;
