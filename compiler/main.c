@@ -7,7 +7,7 @@
 #include <string.h>
 #include <err.h>
 
-#include <linux/limits.h>
+#include <limits.h>
 #include <unistd.h>
 #include <fcntl.h>
 

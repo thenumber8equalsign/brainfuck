@@ -1,4 +1,3 @@
-// Brainfuck compiler for linux AMD64
 #ifndef __BRAINFUCK_H__
 #define __BRAINFUCK_H__
 
@@ -13,6 +12,7 @@
 #include <sys/types.h>
 #include <stdbool.h>
 #include <arrays.h>
+#include <sys/mman.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -283,8 +283,8 @@ static const char *assembly_begin =
 	// we need to multiply based on if we are using 1 byte cells,
 	// or 2 byte cells, or etc
 	"	lea	rsi, QWORD PTR [rsi%s]\n"
-	"	mov	rdx, 0x3\n"
-	"	mov	r10, 0x22\n"
+	"	mov	rdx, (" STR(PROT_READ) " | " STR(PROT_WRITE) ")\n"
+	"	mov	r10, (" STR(MAP_ANONYMOUS) " | " STR(MAP_PRIVATE) ")\n"
 	"	mov	r8, -1\n"
 	"	xor	r9d, r9d\n"
 	"	syscall\n"
@@ -321,7 +321,7 @@ static const char *assembly_end =
 	"	syscall\n"
 	"	mov	rsp, rbp\n"
 	"	pop	rbp\n"
-	"	mov	rax, 60\n"
+	"	mov	rax, " STR(SYS_exit) "\n"
 	"	xor	edi, edi\n"
 	"	syscall\n"
 	;

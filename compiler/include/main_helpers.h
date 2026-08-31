@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <brainfuck.h>
-#include <linux/limits.h>
+#include <limits.h>
 
 #define FL_OUTPUT_ASSEMBLY ((uint32_t)0x1)
 
