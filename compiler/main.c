@@ -1,4 +1,3 @@
-// Brainfuck compiler for linux AMD64
 #include <config.h>
 #include <assert.h>
 #include <stdio.h>

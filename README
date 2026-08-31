@@ -1,4 +1,5 @@
-an optimizing brainfuck compiler for Linux AMD64, and cross-platform interpreter
+an optimizing brainfuck compiler for POSIX AMD64, and cross-platform interpreter
+note: I have only tested this on Linux, and a fresh install of FreeBSD
 
 there is a compiler located at compiler/
 It is very fast,
