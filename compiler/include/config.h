@@ -14,7 +14,6 @@
 // because _DEFAULT_SOURCE always set it to 202405L
 // So i just decided to deal with it
 #define _DEFAULT_SOURCE
-#include <features.h>
 
 // uncomment to include all the sanity checks to prevent unexpected errors
 #define DEBUG
