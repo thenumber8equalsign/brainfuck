@@ -1,6 +1,10 @@
 This is the brainfuck compiler.
 the main() function is defined in main.c
 
+Note: if running on a non-GNU system, the gmake utility will be required,
+the normal `make` command will not work if not running on a GNU system
+where make is not symlinked to gmake
+
 you can include or exclude the sanity checks with assert()
 by undefining the DEBUG macro in include/config.h
 
