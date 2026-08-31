@@ -77,7 +77,7 @@ static int handle_child_process(const char *pathname,
 		// we may be running on another system without the GNU assembler
 		// now try clang
 		executable_path = "clang";
-		execlp("clang", "clang", "-o", output_pathname, pathname,
+		execlp("clang", "clang", "-c", "-o", output_pathname, pathname,
 		       (char *)NULL);
 	}
 	return 0;
