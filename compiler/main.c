@@ -26,7 +26,7 @@ int main(int argc, char **argv)
 		return EXIT_FAILURE;
 	}
 
-	char output_pathname[PATH_MAX] = "./a.out";
+	char output_pathname[PATH_MAX];
 	char brainfuck_pathname[PATH_MAX];
 	int ret;
 	uint64_t option_flags = 0;
@@ -39,6 +39,7 @@ int main(int argc, char **argv)
 	brainfuck_pathname[PATH_MAX - 1] = 0;
 
 	strcpy(brainfuck_pathname, "./app2.bf");
+	strcpy(output_pathname, "./a.out");
 
 	parse_options(argc, argv, &option_flags, &options, brainfuck_pathname,
 		      output_pathname);
