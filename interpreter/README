@@ -11,7 +11,7 @@ made to skip the loop. The new version also reads the entire file into memory
 before interpreting it, which speeds up runtime but increases memory footprint.
 
 When it comes to pure speed, the original is very slow. The new version
-may have comperable performance to the compiler at zero optimization with
+may have comparable performance to the compiler at zero optimization with
 wrapping behavior. I have observed a 10 second difference in favour of the new
 interpreter when compared to the compiler on the mandelbrot fractal
 viewer on my T480. However, on my desktop, the compiler outperforms the
