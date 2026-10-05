@@ -1,4 +1,4 @@
-.PHONY: all stack nostack _build_dir
+.PHONY: all stack nostack _build_dir clean
 CC = gcc
 BUILD_DIR = $(abspath ./build/)
 
@@ -12,3 +12,6 @@ nostack:
 
 _build_dir:
 	mkdir -p $(BUILD_DIR)
+
+clean:
+	rm -r $(BUILD_DIR)
