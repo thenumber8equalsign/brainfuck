@@ -11,4 +11,4 @@ nostack:
 	$(CC) -O3 no_stack.c -o $(BUILD_DIR)/no_stack
 
 _build_dir:
-	mkdir $(BUILD_DIR)
+	mkdir -p $(BUILD_DIR)
